@@ -18,11 +18,11 @@ def _compute_stops(position_km: float, stops: list[dict]) -> list[dict]:
     for stop in stops:
         d = stop["distance_km"]
         if position_km >= d + 5:
-            status = "passed"
+            status = "пройдено"
         elif abs(position_km - d) <= 5:
-            status = "current"
+            status = "текущая"
         else:
-            status = "upcoming"
+            status = "впереди"
         result.append({
             "name": stop["name"],
             "distance_km": d,

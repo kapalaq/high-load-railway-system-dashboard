@@ -14,26 +14,32 @@ QUERY_API_TOKEN  = os.getenv(
 
 ROUTES = {
     "AKA": {
-        "route_name": "Astana - Karaganda - Almaty",
+        "route_name": "Астана - Қарағанды - Алматы",
         "total_distance_km": 1211,
         "stops": [
-            {"name": "Astana",    "distance_km": 0,    "status": "passed",   "latitude": 51.1811, "longitude": 71.4460},
-            {"name": "Karaganda", "distance_km": 211,  "status": "upcoming", "latitude": 49.8047, "longitude": 73.0884},
-            {"name": "Almaty",    "distance_km": 1211, "status": "upcoming", "latitude": 43.2220, "longitude": 76.8512},
+            {"name": "Астана",    "distance_km": 0,    "status": "пройдено",   "latitude": 51.1811, "longitude": 71.4460},
+            {"name": "Қарағанды", "distance_km": 211,  "status": "впереди",    "latitude": 49.8047, "longitude": 73.0884},
+            {"name": "Алматы",    "distance_km": 1211, "status": "впереди",    "latitude": 43.2220, "longitude": 76.8512},
         ],
     },
     "AKA_REV": {
-        "route_name": "Almaty - Karaganda - Astana",
+        "route_name": "Алматы - Қарағанды - Астана",
         "total_distance_km": 1211,
         "stops": [
-            {"name": "Almaty",    "distance_km": 0,    "status": "passed",   "latitude": 43.2220, "longitude": 76.8512},
-            {"name": "Karaganda", "distance_km": 1000, "status": "upcoming", "latitude": 49.8047, "longitude": 73.0884},
-            {"name": "Astana",    "distance_km": 1211, "status": "upcoming", "latitude": 51.1811, "longitude": 71.4460},
+            {"name": "Алматы",    "distance_km": 0,    "status": "пройдено",   "latitude": 43.2220, "longitude": 76.8512},
+            {"name": "Қарағанды", "distance_km": 1000, "status": "впереди",    "latitude": 49.8047, "longitude": 73.0884},
+            {"name": "Астана",    "distance_km": 1211, "status": "впереди",    "latitude": 51.1811, "longitude": 71.4460},
         ],
     },
 }
 
-LOCOS = [
+LOCOS_DEV = [
+    # 1x KZ8A (Electric) + 1x TE33A (Diesel) — lightweight, for frontend development
+    {"train_id": "KZ8A-L001",  "loco_type": "KZ8A",  "locomotive_type": "Electric", "route_key": "AKA",     "phase_offset": 0.0},
+    {"train_id": "TE33A-L006", "loco_type": "TE33A", "locomotive_type": "Diesel",   "route_key": "AKA",     "phase_offset": 0.3},
+]
+
+LOCOS_HIGHLOAD = [
     # 5x KZ8A (Electric)
     {"train_id": "KZ8A-L001", "loco_type": "KZ8A",  "locomotive_type": "Electric", "route_key": "AKA",     "phase_offset": 0.0},
     {"train_id": "KZ8A-L002", "loco_type": "KZ8A",  "locomotive_type": "Electric", "route_key": "AKA",     "phase_offset": 0.7},
@@ -47,3 +53,6 @@ LOCOS = [
     {"train_id": "TE33A-L009", "loco_type": "TE33A", "locomotive_type": "Diesel",  "route_key": "AKA_REV", "phase_offset": 2.4},
     {"train_id": "TE33A-L010", "loco_type": "TE33A", "locomotive_type": "Diesel",  "route_key": "AKA",     "phase_offset": 3.1},
 ]
+
+SIM_MODE = os.getenv("SIM_MODE", "dev")
+LOCOS = LOCOS_DEV if SIM_MODE == "dev" else LOCOS_HIGHLOAD
