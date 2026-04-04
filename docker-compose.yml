@@ -61,8 +61,12 @@ services:
         condition: service_healthy
     environment:
       INGESTION_URL: ws://ingestion:8001/ws/telemetry
+      QUERY_API_WS_URL: ws://query-api:8000/api/websocket/ws
       HZ: "10"
       RECONNECT_DELAY_S: "2"
+    networks:
+      - default
+      - railway
     restart: on-failure
 
   query-api:
@@ -71,14 +75,18 @@ services:
       dockerfile: Dockerfile
     environment:
       DATABASE_URL: "postgresql://user:password@query-postgres/general_api_db"
+      REDIS_URL: "redis://redis:6379"
     volumes:
       - ./query-api/app:/app/app
     ports:
       - "8000:8000"
     networks:
+      - default
       - railway
     depends_on:
       query-postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
 

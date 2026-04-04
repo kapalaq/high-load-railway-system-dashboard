@@ -20,5 +20,8 @@ pydantic-settings==2.11.0
 email-validator==2.3.0
 python-dotenv==1.2.0
 
+# Redis
+redis[asyncio]==5.2.1
+
 # Testing
 pytest==9.0.1

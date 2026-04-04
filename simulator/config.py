@@ -4,6 +4,14 @@ INGESTION_URL = os.getenv("INGESTION_URL", "ws://localhost:8001/ws/telemetry")
 HZ = float(os.getenv("HZ", "0.01"))
 RECONNECT_DELAY_S = float(os.getenv("RECONNECT_DELAY_S", "2"))
 
+QUERY_API_WS_URL = os.getenv("QUERY_API_WS_URL", "ws://localhost:8000/api/websocket/ws")
+QUERY_API_TOKEN  = os.getenv(
+    "QUERY_API_TOKEN",
+    "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9"
+    ".eyJleHAiOjE3NzU0MTQ1MjQsInN1YiI6IjEiLCJyb2xlIjoiZHJpdmVyIn0"
+    ".jTTlaHdLWG0N0Dep8kn7Y54kbWuwBsB_mSA-7pmm2NQ",
+)
+
 ROUTES = {
     "AKA": {
         "route_name": "Astana - Karaganda - Almaty",

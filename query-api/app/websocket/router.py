@@ -4,7 +4,7 @@ from fastapi import APIRouter, Query, WebSocket, WebSocketDisconnect
 from jose import JWTError, jwt
 
 from app.auth.config import auth_config
-from app.websocket.service import get_data_by_code
+from app.websocket.manager import ConnectionManager
 
 logger = logging.getLogger("uvicorn")
 
@@ -27,6 +27,7 @@ def _decode_token(token: str):
 async def websocket_endpoint(
     websocket: WebSocket,
     token: str = Query(..., description="JWT access token"),
+    train_id: str = Query(..., description="Train ID to subscribe to"),
 ):
     await websocket.accept()
 
@@ -36,16 +37,15 @@ async def websocket_endpoint(
         await websocket.close(code=4001, reason=str(e))
         return
 
-    logger.info("Authenticated WS connection: user_id=%s role=%s", user_id, role)
+    manager: ConnectionManager = websocket.app.state.manager
+    await manager.subscribe(train_id, websocket)
+    logger.info("WS connected: user_id=%s train_id=%s", user_id, train_id)
 
     try:
         while True:
-            code = await websocket.receive_text()
-            code = code.strip()
-            logger.info("Received code '%s' from user %s", code, user_id)
-
-            data = await get_data_by_code(code)
-            await websocket.send_json({"type": "query_result", "code": code, "data": data})
-
+            await websocket.receive_text()
     except WebSocketDisconnect:
-        logger.info("User %s disconnected", user_id)
+        pass
+    finally:
+        await manager.unsubscribe(train_id, websocket)
+        logger.info("WS disconnected: user_id=%s train_id=%s", user_id, train_id)
