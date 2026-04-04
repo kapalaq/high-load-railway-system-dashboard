@@ -29,6 +29,12 @@ _CATEGORIES: list[tuple[str, float, float]] = [
 ]
 _ema_state: dict[tuple[str, str], float] = {}
 
+_SEVERITY_RU: dict[str, str] = {
+    "normal":   "норма",
+    "warning":  "предупреждение",
+    "critical": "критично",
+}
+
 
 # ---------------------------------------------------------------------------
 # Result type
@@ -71,7 +77,8 @@ def _metric_bounds(metric_def: dict) -> tuple[float, float]:
     """Overall (min, max) across all ranges — used for normalisation."""
     all_vals: list[float] = []
     for rng in metric_def["ranges"].values():
-        all_vals.extend(rng)
+        bounds = rng["bounds"] if isinstance(rng, dict) else rng
+        all_vals.extend(bounds)
     return min(all_vals), max(all_vals)
 
 
@@ -82,13 +89,22 @@ def _normalize(value: float, min_val: float, max_val: float) -> float:
     return max(0.0, min(1.0, (value - min_val) / span))
 
 
-def classify_status(value: float, metric_def: dict) -> str:
-    """Return 'normal', 'warning', or 'critical' based on defined ranges."""
-    ranges = metric_def["ranges"]
-    for k, v in ranges.items():
-        if v[0] <= value <= v[1]:
-            return k
-    return "normal"
+def classify_status(value: float, metric_def: dict) -> tuple[str, str]:
+    """Return (range_key, severity) based on defined ranges.
+
+    Supports two range formats:
+    - Legacy:  {"normal": [min, max], ...}              → severity == range_key
+    - Named:   {"name": {"bounds": [min, max], "severity": "warning", ...}}
+    """
+    for key, val in metric_def["ranges"].items():
+        if isinstance(val, list):
+            if val[0] <= value <= val[1]:
+                return key, key
+        else:
+            b = val["bounds"]
+            if b[0] <= value <= b[1]:
+                return key, val["severity"]
+    return "normal", "normal"
 
 
 # ---------------------------------------------------------------------------
@@ -110,32 +126,44 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
         unit  = m["unit"]
 
         if key in metrics_definition:
-            mdef  = metrics_definition[key]
-            level = classify_status(value, mdef)
+            mdef             = metrics_definition[key]
+            range_key, severity = classify_status(value, mdef)
             min_val, max_val = _metric_bounds(mdef)
+            range_def        = mdef["ranges"][range_key]
 
-            if level == "critical":
-                alert_msg = mdef["critical_message"]
-                rec       = mdef["critical_recommendation"]
-            elif level == "warning":
-                alert_msg = mdef["warning_message"]
-                rec       = mdef["warning_recommendation"]
+            if isinstance(range_def, list):
+                # Legacy format — messages stored as "{severity}_message" on metric
+                if severity != "normal":
+                    alert_msg = mdef.get(f"{severity}_message", "")
+                    rec       = mdef.get(f"{severity}_recommendation", "")
+                else:
+                    alert_msg = ""
+                    rec       = ""
+                range_label = _SEVERITY_RU.get(severity, severity)
             else:
-                alert_msg = ""
-                rec       = ""
+                # Named range format — messages stored inline on the range object
+                alert_msg   = range_def.get("message", "")
+                rec         = range_def.get("recommendation", "")
+                range_label = range_def.get("label", _SEVERITY_RU.get(range_key, range_key))
         else:
-            level     = "normal"
-            alert_msg = ""
-            rec       = ""
+            range_key   = "normal"
+            severity    = "normal"
+            range_label = _SEVERITY_RU["normal"]
+            alert_msg   = ""
+            rec         = ""
+            min_val     = 0.0
+            max_val     = 0.0
 
         enriched[key] = {
-            "value":           value,
-            "unit":            unit,
-            "status":          level,
-            "alert_message":   alert_msg,
-            "recommendation":  rec,
-            "min":             min_val,
-            "max":             max_val
+            "value":          value,
+            "unit":           unit,
+            "status":         _SEVERITY_RU.get(severity, severity),
+            "range":          _SEVERITY_RU.get(range_key, range_key),
+            "range_label":    range_label,
+            "alert_message":  alert_msg,
+            "recommendation": rec,
+            "min":            min_val,
+            "max":            max_val,
         }
 
     return enriched
@@ -151,14 +179,12 @@ def compute_health(
     metrics_definition: dict,
 ) -> tuple[float, str]:
     """
-    Return (health_score 0–100, category letter A–E).
-
-    Each known metric contributes equally (weight=1).
-    EMA-smoothed normalised values stabilise the score.
-    Per-metric penalties are subtracted for warning/critical alerts.
+    Return (health_score 0–100, category letter).
+    
+    Starts at a baseline of 100 (perfect health).
+    Subtracts defined penalties for metrics in warning/critical states.
+    EMA smoothing is applied to the final score to prevent sudden jitter.
     """
-    smoothed_sum  = 0.0
-    total_metrics = 0
     total_penalty = 0.0
 
     for m in metrics:
@@ -168,31 +194,29 @@ def compute_health(
         if key not in metrics_definition:
             continue
 
-        mdef             = metrics_definition[key]
-        min_val, max_val = _metric_bounds(mdef)
-        norm             = _normalize(value, min_val, max_val)
+        mdef = metrics_definition[key]
+        range_key, _ = classify_status(value, mdef)
+        
+        # Accumulate penalties based on the config (defaults to 0 if normal)
+        total_penalty += mdef.get("penalties", {}).get(range_key, 0.0)
 
-        ema_key             = (train_id, key)
-        prev                = _ema_state.get(ema_key, norm)
-        smoothed            = _EMA_ALPHA * norm + (1 - _EMA_ALPHA) * prev
-        _ema_state[ema_key] = smoothed
+    # Base health is 100; subtract penalties, floor at 0
+    raw_score = max(0.0, 100.0 - total_penalty)
 
-        smoothed_sum  += smoothed
-        total_metrics += 1
+    # Apply EMA to the overall health score
+    ema_key = (train_id, "overall_health")
+    prev = _ema_state.get(ema_key, raw_score)
+    smoothed = _EMA_ALPHA * raw_score + (1 - _EMA_ALPHA) * prev
+    _ema_state[ema_key] = smoothed
 
-        level          = classify_status(value, mdef)
-        total_penalty += mdef["penalties"].get(level, 0)
-
-    raw_score = (smoothed_sum / total_metrics * 100) if total_metrics > 0 else 0.0
-    final     = max(0.0, raw_score - total_penalty)
-
-    category = "E"
+    # Determine category
+    category = "RUN" # Fallback
     for letter, low, high in _CATEGORIES:
-        if low <= final <= high:
+        if low <= smoothed <= high:
             category = letter
             break
 
-    return round(final, 2), category
+    return round(smoothed, 2), category
 
 
 # ---------------------------------------------------------------------------
@@ -223,7 +247,7 @@ def process(payload: dict) -> TelemetryRow:
 
     enriched                = enrich_metrics(metrics, metrics_definition)
     health_score, category  = compute_health(train_id, metrics, metrics_definition)
-    alert_count             = sum(1 for f in enriched.values() if f["status"] != "ok")
+    alert_count             = sum(1 for f in enriched.values() if f["status"] != _SEVERITY_RU["normal"])
 
     try:
         time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
