@@ -1,0 +1,120 @@
+ema_alpha: 0.2
+alert_penalty: 8
+
+params:
+  speed:
+    weight: 0.10
+    min: 0
+    max: 140
+    warning_threshold: 110
+    critical_threshold: 130
+    warning_alert: "Speed elevated"
+    critical_alert: "Speed critically high — risk of derailment"
+    warning_recommendation: "Reduce speed gradually to within normal operating range."
+    critical_recommendation: "Apply emergency braking immediately and alert dispatcher."
+
+  fuel_level:
+    weight: 0.20
+    min: 0
+    max: 100
+    warning_threshold: 20
+    critical_threshold: 10
+    warning_alert: "Fuel level low"
+    critical_alert: "Fuel critically low — risk of stall"
+    warning_recommendation: "Plan refuel at next available stop."
+    critical_recommendation: "Stop at nearest depot for emergency refuelling."
+
+  engine_temp:
+    weight: 0.20
+    min: 60
+    max: 130
+    warning_threshold: 110
+    critical_threshold: 120
+    warning_alert: "Engine temperature elevated"
+    critical_alert: "Engine overheating — risk of seizure"
+    warning_recommendation: "Reduce engine load and monitor cooling system."
+    critical_recommendation: "Stop engine immediately and inspect cooling system."
+
+  oil_pressure:
+    weight: 0.15
+    min: 2
+    max: 9
+    warning_threshold: 3.5
+    critical_threshold: 2.5
+    warning_alert: "Oil pressure below normal"
+    critical_alert: "Critical oil pressure drop — engine damage imminent"
+    warning_recommendation: "Check oil level at next stop."
+    critical_recommendation: "Stop engine immediately and check for oil leaks."
+
+  voltage:
+    weight: 0.15
+    min: 22
+    max: 30
+    warning_threshold: 23.5
+    critical_threshold: 22.5
+    warning_alert: "Voltage below normal"
+    critical_alert: "Critical low voltage — electrical systems at risk"
+    warning_recommendation: "Inspect alternator and battery connections."
+    critical_recommendation: "Switch to backup power and halt non-essential systems."
+
+  current:
+    weight: 0.05
+    min: 0
+    max: 600
+    warning_threshold: 520
+    critical_threshold: 560
+    warning_alert: "Current draw elevated"
+    critical_alert: "Overcurrent — risk of electrical fire"
+    warning_recommendation: "Reduce load on traction motors."
+    critical_recommendation: "Shut down traction system and inspect wiring immediately."
+
+  brake_pressure:
+    weight: 0.05
+    min: 3
+    max: 7
+    warning_threshold: 3.8
+    critical_threshold: 3.2
+    warning_alert: "Brake pressure low"
+    critical_alert: "Critical brake pressure loss — braking impaired"
+    warning_recommendation: "Check brake lines for leaks at next stop."
+    critical_recommendation: "Reduce speed immediately and perform emergency brake inspection."
+
+  coolant_temp:
+    weight: 0.05
+    min: 60
+    max: 110
+    warning_threshold: 100
+    critical_threshold: 105
+    warning_alert: "Coolant temperature elevated"
+    critical_alert: "Coolant overheating — engine cooling failure"
+    warning_recommendation: "Check coolant level and radiator condition."
+    critical_recommendation: "Stop engine to prevent thermal damage."
+
+  rpm:
+    weight: 0.03
+    min: 0
+    max: 2200
+    warning_threshold: 2000
+    critical_threshold: 2100
+    warning_alert: "RPM approaching limit"
+    critical_alert: "Engine RPM critically high — mechanical stress risk"
+    warning_recommendation: "Reduce throttle to lower engine RPM."
+    critical_recommendation: "Reduce throttle immediately to prevent engine damage."
+
+  load_factor:
+    weight: 0.02
+    min: 0
+    max: 1
+    warning_threshold: 0.88
+    critical_threshold: 0.95
+    warning_alert: "Load factor high"
+    critical_alert: "Load factor critical — engine overloaded"
+    warning_recommendation: "Reduce traction effort on steep gradients."
+    critical_recommendation: "Reduce load immediately to prevent traction motor damage."
+
+categories:
+  A: [90, 100]
+  B: [75, 90]
+  C: [50, 75]
+  D: [25, 50]
+  E: [0,  25]

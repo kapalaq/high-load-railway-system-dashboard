@@ -10,6 +10,22 @@ services:
       timeout: 3s
       retries: 5
 
+  timescaledb:
+    image: timescale/timescaledb:latest-pg15
+    environment:
+      POSTGRES_DB: locomotive
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+    ports:
+      - "5432:5432"
+    volumes:
+      - tsdb_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U user -d locomotive"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   ingestion:
     build: ./ingestion
     ports:
@@ -27,6 +43,17 @@ services:
       timeout: 5s
       retries: 5
 
+  processing:
+    build: ./processing_service
+    depends_on:
+      redis:
+        condition: service_healthy
+      timescaledb:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      DB_URL: postgresql://user:password@timescaledb:5432/locomotive
+
   simulator:
     build: ./simulator
     depends_on:
@@ -38,43 +65,18 @@ services:
       RECONNECT_DELAY_S: "2"
     restart: on-failure
 
-  # --------------------------------------------------------------------------
-  # Teammate scopes — uncomment when their services are ready
-  # --------------------------------------------------------------------------
-
-  # processing:
-  #   build: ./processing_service
-  #   depends_on:
-  #     redis:
-  #       condition: service_healthy
-  #   environment:
-  #     REDIS_URL: redis://redis:6379
-  #     STREAM_NAME: telemetry:raw
-  #     DB_URL: postgresql+asyncpg://user:password@timescaledb:5432/locomotive
-  #   volumes:
-  #     - ./health_config.json:/app/health_config.json
-
   # query-api:
   #   build: ./query-api
   #   ports:
   #     - "8000:8000"
   #   depends_on:
-  #     - redis
-  #     - timescaledb
+  #     redis:
+  #       condition: service_healthy
+  #     timescaledb:
+  #       condition: service_healthy
   #   environment:
   #     REDIS_URL: redis://redis:6379
-  #     DB_URL: postgresql+asyncpg://user:password@timescaledb:5432/locomotive
+  #     DB_URL: postgresql://user:password@timescaledb:5432/locomotive
 
-  # timescaledb:
-  #   image: timescale/timescaledb:latest-pg15
-  #   environment:
-  #     POSTGRES_DB: locomotive
-  #     POSTGRES_USER: user
-  #     POSTGRES_PASSWORD: password
-  #   ports:
-  #     - "5432:5432"
-  #   volumes:
-  #     - tsdb_data:/var/lib/postgresql/data
-
-# volumes:
-#   tsdb_data:
+volumes:
+  tsdb_data:
