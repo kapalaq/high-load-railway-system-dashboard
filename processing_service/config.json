@@ -167,19 +167,33 @@
           "warning_recommendation": "Снизьте тягу.",
           "critical_recommendation": "Немедленно снизьте тягу во избежание повреждения тягового двигателя."
         },
-        "fuel_liters": {
-          "label": "Топливо",
-          "unit": "л",
+        "energy_usage": {
+          "label": "Потребление энергии",
+          "unit": "кВт·ч",
           "ranges": {
-            "normal":   [300, 1500],
-            "warning":  [100, 299],
-            "critical": [0, 99]
+            "normal":   [0, 1200],
+            "warning":  [1201, 1400],
+            "critical": [1401, 1500]
           },
-          "penalties": { "warning": 10, "critical": 30 },
-          "warning_message": "Уровень топлива низкий",
-          "critical_message": "Топливо на критически низком уровне — риск остановки",
-          "warning_recommendation": "Запланируйте дозаправку на ближайшей возможной остановке.",
-          "critical_recommendation": "Остановитесь на ближайшем депо для экстренной заправки."
+          "penalties": { "warning": 5, "critical": 15 },
+          "warning_message": "Потребление энергии повышено",
+          "critical_message": "Критически высокое потребление энергии",
+          "warning_recommendation": "Снизьте тяговую нагрузку для уменьшения потребления энергии.",
+          "critical_recommendation": "Немедленно снизьте нагрузку — риск перегрузки энергосистемы."
+        },
+        "current_ampere": {
+          "label": "Ток",
+          "unit": "А",
+          "ranges": {
+            "normal":   [0, 2000],
+            "warning":  [2001, 2500],
+            "critical": [2501, 3000]
+          },
+          "penalties": { "warning": 8, "critical": 25 },
+          "warning_message": "Ток повышен",
+          "critical_message": "Критически высокий ток — риск повреждения электрооборудования",
+          "warning_recommendation": "Снизьте тяговую нагрузку.",
+          "critical_recommendation": "Немедленно снизьте нагрузку и проверьте электрическую систему."
         },
         "brake_force": {
           "label": "Тормозное усилие",
@@ -271,7 +285,7 @@
           "warning_recommendation": "Проверьте систему охлаждения воздуха.",
           "critical_recommendation": "Немедленно остановитесь и проверьте систему кондиционирования."
         },
-        "engine_oil_pressure": {
+        "pressure_oil": {
           "label": "Давление масла в двигателе",
           "unit": "бар",
           "ranges": {
@@ -354,6 +368,20 @@
           "critical_message": "Топливо на критически низком уровне — риск остановки",
           "warning_recommendation": "Запланируйте дозаправку на ближайшей возможной остановке.",
           "critical_recommendation": "Остановитесь на ближайшем депо для экстренной заправки."
+        },
+        "current_ampere": {
+          "label": "Ток",
+          "unit": "А",
+          "ranges": {
+            "normal":   [0, 1500],
+            "warning":  [1501, 1800],
+            "critical": [1801, 2000]
+          },
+          "penalties": { "warning": 8, "critical": 25 },
+          "warning_message": "Ток повышен",
+          "critical_message": "Критически высокий ток — риск повреждения электрооборудования",
+          "warning_recommendation": "Снизьте тяговую нагрузку.",
+          "critical_recommendation": "Немедленно снизьте нагрузку и проверьте электрическую систему."
         },
         "brake_force": {
           "label": "Тормозное усилие",
