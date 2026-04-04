@@ -37,7 +37,7 @@ _ema_state: dict[tuple[str, str], float] = {}
 @dataclass
 class TelemetryRow:
     time: datetime
-    loco_id: str
+    train_id: str
     health_score: float
     health_category: str
     alert_count: int
@@ -48,12 +48,12 @@ class TelemetryRow:
         """Ready-to-insert tuple for asyncpg executemany."""
         return (
             self.time,
-            self.loco_id,
+            self.train_id,
             self.health_score,
             self.health_category,
             self.alert_count,
-            self.params,
-            self.route_info,
+            json.dumps(self.params),
+            json.dumps(self.route_info),
         )
 
 
@@ -115,6 +115,7 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
         if key in metrics_definition:
             mdef  = metrics_definition[key]
             level = classify_status(value, mdef)
+            min_val, max_val = _metric_bounds(mdef)
 
             if level == "critical":
                 alert_msg = mdef["critical_message"]
@@ -136,6 +137,8 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
             "status":          level,
             "alert_message":   alert_msg,
             "recommendation":  rec,
+            "min":             min_val,
+            "max":             max_val
         }
 
     return enriched
@@ -180,7 +183,7 @@ def compute_health(
         smoothed_sum  += smoothed
         total_metrics += 1
 
-        level          = classify_alert(value, mdef)
+        level          = classify_status(value, mdef)
         total_penalty += mdef["penalties"].get(level, 0)
 
     raw_score = (smoothed_sum / total_metrics * 100) if total_metrics > 0 else 0.0
@@ -232,7 +235,7 @@ def process(payload: dict) -> TelemetryRow:
 
     return TelemetryRow(
         time=time,
-        loco_id=train_id,
+        train_id=train_id,
         health_score=health_score,
         health_category=category,
         alert_count=alert_count,

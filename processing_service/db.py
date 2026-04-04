@@ -7,7 +7,7 @@ DB_URL = os.environ.get("DB_URL", "postgresql://user:password@localhost:5432/loc
 CREATE_TABLE_SQL = """
 CREATE TABLE IF NOT EXISTS telemetry (
     time             TIMESTAMPTZ      NOT NULL,
-    loco_id          TEXT             NOT NULL,
+    train_id         TEXT             NOT NULL,
     health_score     DOUBLE PRECISION,
     health_category  CHAR(255),
     alert_count      INTEGER,
@@ -21,11 +21,11 @@ SELECT create_hypertable('telemetry', 'time', if_not_exists => TRUE);
 """
 
 CREATE_INDEX_SQL = """
-CREATE INDEX IF NOT EXISTS idx_telemetry_loco ON telemetry (loco_id, time DESC);
+CREATE INDEX IF NOT EXISTS idx_telemetry_train ON telemetry (train_id, time DESC);
 """
 
 INSERT_SQL = """
-INSERT INTO telemetry (time, loco_id, health_score, health_category, alert_count, params, route_info)
+INSERT INTO telemetry (time, train_id, health_score, health_category, alert_count, params, route_info)
 VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)
 """
 
