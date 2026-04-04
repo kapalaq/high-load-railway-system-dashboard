@@ -8,7 +8,7 @@ services:
     environment:
       DATABASE_URL: "postgresql://user:password@postgres/general_api_db"
     volumes:
-      - ../app:/app/app
+      - ./app:/app/app
     ports:
       - "8000:8000"
     networks:
