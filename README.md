@@ -1,113 +1,116 @@
-# High-Load Railway System Dashboard
+# Высоконагруженная система мониторинга железнодорожного транспорта
 
-A real-time digital twin dashboard for locomotive telemetry. Streams sensor data from 10 locomotives simultaneously, computes health indices, stores processed snapshots, and visualizes everything live.
+Система реального времени в формате «цифрового двойника» для мониторинга телеметрии локомотивов. Одновременно принимает потоки данных от 10 локомотивов, вычисляет индекс технического состояния, сохраняет обработанные снимки в базе данных и отображает всё в режиме реального времени на React-фронтенде.
 
 ---
 
-## Architecture
+## Архитектура
 
 ```
-[10 Simulators] --WebSocket--> [Ingestion Service]
-                                       |
-                                       v
-                                [Redis Streams]          ← burst buffer
-                                       |
-                                       v
-                              [Processing Service]       ← health index, EMA
-                                 /            \
-                       (immediate)              (async)
-                              /                  \
-                     [Redis Pub/Sub]          [TimescaleDB]
-                              |                    |
-                              +--------+-----------+
-                                       |
-                              [Query API + WS Hub]       ← REST + WebSocket
-                                       |
-                               [React Frontend]
+[10 симуляторов] --WebSocket--> [Ingestion Service]
+                                        |
+                                        v
+                                 [Redis Streams]          ← буфер + воспроизведение
+                                        |
+                                        v
+                               [Processing Service]       ← индекс состояния, EMA
+                                  /            \
+                        (немедленно)             (асинхронно)
+                               /                  \
+                      [Redis Pub/Sub]          [TimescaleDB]
+                      metrics:live                  |
+                               |                    |
+                               +--------+-----------+
+                                        |
+                               [Query API + WS Hub]       ← REST + WebSocket
+                                        |
+                                 [React Frontend]
 ```
 
-### Services
+### Сервисы
 
-| Service | Directory | Port | Role |
+| Сервис | Директория | Порт | Роль |
 |---|---|---|---|
-| `redis` | — | 6379 | Streams broker + Pub/Sub fan-out |
-| `timescaledb` | — | 5432 | Processed telemetry history (`locomotive` DB) |
-| `ingestion` | `./ingestion` | 8001 | WebSocket receiver → Redis Streams |
-| `processing` | `./processing_service` | — | Computes health index, writes TimescaleDB |
-| `query-api` | `./query-api` | 8000 | REST API + WebSocket hub for frontend |
-| `query-postgres` | — | 5433 | User auth database (`general_api_db`) |
-| `pgadmin` | — | 5050 | Database admin UI |
-| `simulator` | `./simulator` | — | Generates fake telemetry for 10 locos |
+| `redis` | — | 6379 | Redis Streams (брокер) + Pub/Sub (fan-out) |
+| `timescaledb` | — | 5432 | История телеметрии (`locomotive` DB) |
+| `query-postgres` | — | 5433 | База данных авторизации (`general_api_db`) |
+| `ingestion` | `./ingestion` | 8001 | Приём WebSocket → запись в Redis Streams |
+| `processing` | `./processing_service` | — | Вычисление индекса состояния, запись в TimescaleDB |
+| `query-api` | `./query-api` | 8000 | REST API + WebSocket Hub для фронтенда |
+| `simulator` | `./simulator` | — | Генерация симулированной телеметрии (10 локомотивов) |
+| `pgadmin` | — | 5050 | Веб-интерфейс для управления базами данных |
 
 ---
 
-## Prerequisites
+## Требования
 
-- Docker Desktop (or Docker Engine + Compose plugin)
+- Docker Desktop
 - `docker compose` v2+
 
-No other local dependencies are required.
+Другие локальные зависимости не требуются.
 
 ---
 
-## Quick Start
+## Быстрый старт
 
 ```bash
-# 1. Clone the repo
+# 1. Клонировать репозиторий
 git clone <repo-url>
 cd high-load-railway-system-dashboard
 
-# 2. Start all services
-docker compose up --build
+# 2. Запустить все сервисы
+docker compose up --build -d
 
-# 3. Wait ~20 seconds for all health checks to pass, then verify:
+# 3. Подождать ~20 секунд, пока пройдут health checks, затем проверить:
 curl http://localhost:8001/health    # ingestion
-curl http://localhost:8000/docs      # query-api OpenAPI docs
+curl http://localhost:8000/docs      # OpenAPI-документация query-api
 ```
 
-All services start in dependency order via Docker health checks.
+Все сервисы запускаются в правильном порядке через Docker health checks.
 
 ---
 
-## Environment Variables
 
-All variables have defaults — no `.env` file is required for local development.
+## Переменные окружения
+
+Все переменные имеют значения по умолчанию — файл `.env` не обязателен для локальной разработки.
 
 ### `ingestion`
-| Variable | Default | Description |
+| Переменная | По умолчанию | Описание |
 |---|---|---|
-| `REDIS_URL` | `redis://redis:6379` | Redis connection |
-| `STREAM_NAME` | `telemetry:raw` | Redis Stream key |
-| `STREAM_MAXLEN` | `100000` | Max stream length (~30 min at 10 Hz) |
+| `REDIS_URL` | `redis://redis:6379` | Подключение к Redis |
+| `STREAM_NAME` | `telemetry:raw` | Ключ Redis Stream |
+| `STREAM_MAXLEN` | `100000` | Максимальная длина потока (~30 мин при 10 Hz) |
 
 ### `processing_service`
-| Variable | Default | Description |
+| Переменная | По умолчанию | Описание |
 |---|---|---|
-| `REDIS_URL` | `redis://redis:6379` | Redis connection |
-| `DB_URL` | `postgresql://user:password@timescaledb:5432/locomotive` | TimescaleDB connection |
+| `REDIS_URL` | `redis://redis:6379` | Подключение к Redis |
+| `DB_URL` | `postgresql://user:password@timescaledb:5432/locomotive` | Подключение к TimescaleDB |
 
 ### `query-api`
-| Variable | Default | Description |
+| Переменная | По умолчанию | Описание |
 |---|---|---|
-| `DATABASE_URL` | `postgresql://user:password@query-postgres/general_api_db` | Auth DB |
+| `DATABASE_URL` | `postgresql://user:password@query-postgres/general_api_db` | База данных авторизации |
 | `REDIS_URL` | `redis://redis:6379` | Redis Pub/Sub |
-| `TIMESCALE_URL` | `postgresql://user:password@timescaledb:5432/locomotive` | Telemetry history |
+| `TIMESCALE_URL` | `postgresql://user:password@timescaledb:5432/locomotive` | История телеметрии |
+| `RUN_MIGRATIONS_UPON_LAUNCH` | `true` | Применять Alembic-миграции при запуске |
 
 ### `simulator`
-| Variable | Default | Description |
+| Переменная | По умолчанию | Описание |
 |---|---|---|
-| `INGESTION_URL` | `ws://ingestion:8001/ws/telemetry` | Ingestion WebSocket |
-| `QUERY_API_WS_URL` | `ws://query-api:8000/api/websocket/ws` | Query API WS (RTT monitoring) |
-| `HZ` | `10` | Telemetry frequency per locomotive |
-| `RECONNECT_DELAY_S` | `2` | Reconnect backoff seconds |
+| `INGESTION_URL` | `ws://ingestion:8001/ws/telemetry` | WebSocket ingestion |
+| `QUERY_API_WS_URL` | `ws://query-api:8000/api/websocket/ws` | WebSocket query-api (мониторинг RTT) |
+| `HZ` | `10` | Частота отправки телеметрии (событий/сек на локомотив) |
+| `RECONNECT_DELAY_S` | `2` | Задержка переподключения (секунды) |
 
 ---
 
-## API Reference
+## API
 
-### Authentication
+### Авторизация
 
-#### Register a user
+#### Регистрация пользователя
 ```http
 POST /api/auth/register
 Content-Type: application/json
@@ -117,14 +120,16 @@ Content-Type: application/json
   "password": "secret",
   "email": "driver1@rail.kz",
   "full_name": "Driver One",
-  "role": "DRIVER",
+  "role": "driver",
   "train_id": "KZ8A-L001"
 }
 ```
 
-Roles: `DRIVER`, `DISPATCHER`, `ADMIN`
+Роли: `driver`, `dispatcher`, `admin`
 
-#### Get a JWT token
+Поле `train_id` привязывает пользователя к конкретному локомотиву и включается в JWT-токен.
+
+#### Получение JWT-токена
 ```http
 POST /api/auth/token
 Content-Type: application/x-www-form-urlencoded
@@ -132,24 +137,24 @@ Content-Type: application/x-www-form-urlencoded
 username=driver1&password=secret
 ```
 
-Returns:
+Ответ:
 ```json
 { "access_token": "<jwt>", "token_type": "bearer" }
 ```
 
-Tokens are valid for **24 hours**.
+Токен действителен **24 часа**. Полезная нагрузка JWT содержит `sub` (ID пользователя), `role` и `train_id`.
 
 ---
 
-### WebSocket — Live Telemetry
+### WebSocket — телеметрия в реальном времени
 
 ```
 ws://localhost:8000/api/websocket/ws?token=<jwt>&train_id=<train_id>
 ```
 
-Connect to receive a continuous stream of processed telemetry snapshots for the given `train_id`. The server broadcasts on every new processing cycle.
+После подключения сервер непрерывно отправляет обработанные снимки телеметрии по указанному `train_id`. Широковещательная рассылка происходит при каждом новом цикле обработки.
 
-**Example message received:**
+**Пример получаемого сообщения:**
 ```json
 {
   "train_id": "KZ8A-L001",
@@ -174,73 +179,77 @@ Connect to receive a continuous stream of processed telemetry snapshots for the 
 }
 ```
 
+Маршрутизация сообщений реализована через Redis Pub/Sub канал `metrics:live`: Processing Service публикует снимок → query-api получает и рассылает подключённым WebSocket-клиентам по `train_id`.
+
 ---
 
-### REST — Historical Telemetry
+### REST — историческая телеметрия
 
 ```http
 GET /api/historic/telemetry/{train_id}?distance_km=350
 Authorization: Bearer <jwt>
 ```
 
-Returns the stored telemetry snapshot closest to `distance_km` along the route for `train_id`.
+Возвращает сохранённый снимок телеметрии, ближайший к указанному значению `distance_km` по маршруту локомотива.
 
 ---
 
-### OpenAPI Docs
+### OpenAPI-документация
 
-Interactive docs available at `http://localhost:8000/docs` once the stack is running.
+Интерактивная документация доступна по адресу `http://localhost:8000/docs` после запуска стека.
 
 ---
 
-## Locomotives & Trains
+## Локомотивы и маршруты
 
-The simulator generates data for 10 locomotives across two routes.
+Симулятор генерирует данные для 10 локомотивов на двух маршрутах.
 
-| Train ID | Type | Loco Model | Route |
+| Train ID | Тип | Модель | Маршрут |
 |---|---|---|---|
-| KZ8A-L001 | Electric | KZ8A (Alstom/EKZ) | Astana → Karaganda → Almaty |
-| KZ8A-L002 | Electric | KZ8A | Astana → Karaganda → Almaty |
-| KZ8A-L003 | Electric | KZ8A | Almaty → Karaganda → Astana |
-| KZ8A-L004 | Electric | KZ8A | Astana → Karaganda → Almaty |
-| KZ8A-L005 | Electric | KZ8A | Almaty → Karaganda → Astana |
-| TE33A-L006 | Diesel | TE33A (GE/Kurastyru) | Astana → Karaganda → Almaty |
-| TE33A-L007 | Diesel | TE33A | Almaty → Karaganda → Astana |
-| TE33A-L008 | Diesel | TE33A | Astana → Karaganda → Almaty |
-| TE33A-L009 | Diesel | TE33A | Almaty → Karaganda → Astana |
-| TE33A-L010 | Diesel | TE33A | Astana → Karaganda → Almaty |
+| KZ8A-L001 | Электровоз | KZ8A (Alstom/EKZ) | Astana → Karaganda → Almaty |
+| KZ8A-L002 | Электровоз | KZ8A | Astana → Karaganda → Almaty |
+| KZ8A-L003 | Электровоз | KZ8A | Almaty → Karaganda → Astana |
+| KZ8A-L004 | Электровоз | KZ8A | Astana → Karaganda → Almaty |
+| KZ8A-L005 | Электровоз | KZ8A | Almaty → Karaganda → Astana |
+| TE33A-L006 | Тепловоз | TE33A (GE/Kurastyru) | Astana → Karaganda → Almaty |
+| TE33A-L007 | Тепловоз | TE33A | Almaty → Karaganda → Astana |
+| TE33A-L008 | Тепловоз | TE33A | Astana → Karaganda → Almaty |
+| TE33A-L009 | Тепловоз | TE33A | Almaty → Karaganda → Astana |
+| TE33A-L010 | Тепловоз | TE33A | Astana → Karaganda → Almaty |
 
 ---
 
-## Health Index
+## Индекс технического состояния
 
-Computed in `processing_service/processing.py` for every telemetry message.
+Вычисляется в `processing_service/processing.py` для каждого сообщения телеметрии.
 
-### Score (0–100)
-1. Each metric is checked against ranges defined in `processing_service/config.json`
-2. Out-of-range metrics apply a **penalty** (warning: 5–10 pts, critical: 15–30 pts)
-3. Raw score = 100 − total penalties
-4. EMA smoothing applied with `alpha = 0.2` (configurable in `config.json`)
+### Оценка (0–100)
 
-### Categories
-| Category | Score Range |
+1. Каждый параметр проверяется на соответствие допустимым диапазонам, заданным в `processing_service/config.json`
+2. Параметры вне диапазона дают **штраф** (предупреждение: 5–10 баллов, критическое: 15–30 баллов)
+3. Сырая оценка = 100 − сумма штрафов
+4. Применяется EMA-сглаживание с `alpha = 0.2` (настраивается в `config.json`)
+
+### Категории
+
+| Категория | Диапазон оценки |
 |---|---|
 | Normal | 75 – 100 |
 | Warning | 40 – 75 |
 | Critical | 1 – 40 |
 | RUN | 0 – 1 |
 
-### Monitored Metrics
+### Отслеживаемые параметры
 
-**KZ8A (Electric):** speed, temp_motor, temp_oil, temp_converters, temp_air, pantograph_voltage, pressure_oil, pressure_main_tank, pressure_brake, pressure_air, tractive_force, energy_usage, current_ampere, brake_force
+**KZ8A (электровоз):** speed, temp_motor, temp_oil, temp_converters, temp_air, pantograph_voltage, pressure_oil, pressure_main_tank, pressure_brake, pressure_air, tractive_force, energy_usage, current_ampere, brake_force
 
-**TE33A (Diesel):** speed, temp_motor, temp_oil, temp_converters, temp_air, pressure_oil, pressure_main_tank, pressure_brake, pressure_air, tractive_force, fuel_liters, current_ampere, brake_force
+**TE33A (тепловоз):** speed, temp_motor, temp_oil, temp_converters, temp_air, pressure_oil, pressure_main_tank, pressure_brake, pressure_air, tractive_force, fuel_liters, current_ampere, brake_force
 
 ---
 
-## Database Schema
+## Схема баз данных
 
-### TimescaleDB — `locomotive` database
+### TimescaleDB — база данных `locomotive`
 
 ```sql
 CREATE TABLE telemetry (
@@ -249,21 +258,21 @@ CREATE TABLE telemetry (
     health_score     DOUBLE PRECISION,
     health_category  TEXT,
     alert_count      INTEGER,
-    params           JSONB,           -- enriched metric map
-    route_info       JSONB            -- position and stops
+    params           JSONB,           -- обогащённая карта параметров
+    route_info       JSONB            -- текущая позиция и остановки
 );
 
--- Hypertable partitioned by time (1-hour chunks)
+-- Гипертаблица с разбивкой по времени (интервал 1 час)
 SELECT create_hypertable('telemetry', 'time', chunk_time_interval => INTERVAL '1 hour');
 
 CREATE INDEX ON telemetry (train_id, time DESC);
 ```
 
-The processing service creates this schema automatically at startup.
+Схема создаётся автоматически при запуске processing service.
 
-### PostgreSQL — `general_api_db` database (auth)
+### PostgreSQL — база данных `general_api_db` (авторизация)
 
-Managed via Alembic migrations that run automatically on query-api startup.
+Управляется через Alembic-миграции, которые применяются автоматически при запуске query-api.
 
 ```sql
 CREATE TABLE users (
@@ -272,80 +281,80 @@ CREATE TABLE users (
     email           TEXT,
     full_name       TEXT,
     hashed_password TEXT NOT NULL,
-    role            TEXT NOT NULL,   -- DRIVER | DISPATCHER | ADMIN
+    role            TEXT NOT NULL,       -- driver | dispatcher | admin
     is_active       BOOLEAN DEFAULT TRUE,
-    train_id        TEXT             -- associated locomotive
+    train_id        TEXT                 -- привязанный локомотив
 );
 ```
 
 ---
 
-## Redis Channels
+## Redis-каналы
 
-| Key | Type | Producer | Consumer | Description |
+| Ключ | Тип | Источник | Потребитель | Описание |
 |---|---|---|---|---|
-| `telemetry:raw` | Stream | ingestion | processing | Raw telemetry (maxlen 100k) |
-| `metrics:live` | Pub/Sub | processing | query-api | Processed snapshots for live feed |
+| `telemetry:raw` | Stream | ingestion | processing | Сырая телеметрия (maxlen 100k) |
+| `metrics:live` | Pub/Sub | processing | query-api | Обработанные снимки для live-feed |
 
 ---
 
-## Database Admin (pgAdmin)
+## Управление базами данных (pgAdmin)
 
-Access at `http://localhost:5050`
+Доступ по адресу `http://localhost:5050`
 
-| Field | Value |
+| Поле | Значение |
 |---|---|
 | Email | `admin@email.com` |
-| Password | `admin` |
+| Пароль | `admin` |
 
-Add server connections manually:
+Подключения к серверам (добавить вручную):
 
-**Auth DB:**
+**База авторизации:**
 - Host: `query-postgres`, Port: `5432`, User: `user`, Password: `password`, DB: `general_api_db`
 
-**Telemetry DB:**
+**База телеметрии:**
 - Host: `timescaledb`, Port: `5432`, User: `user`, Password: `password`, DB: `locomotive`
 
 ---
 
-## Useful Commands
+## Полезные команды
 
 ```bash
-# View logs for a specific service
+# Просмотр логов конкретного сервиса
 docker compose logs -f processing
 
-# Restart just the simulator
+# Перезапуск только симулятора
 docker compose restart simulator
 
-# High-load test: bump to 100 Hz per locomotive
+# Высоконагрузочный тест: поднять частоту до 100 Hz на локомотив
 docker compose stop simulator
 HZ=100 docker compose up -d simulator
 
-# Check Redis stream length
+# Проверить длину Redis Stream
 docker compose exec redis redis-cli XLEN telemetry:raw
 
-# Connect to TimescaleDB
+# Подключиться к TimescaleDB
 docker compose exec timescaledb psql -U user -d locomotive
 
-# Connect to auth DB
+# Подключиться к базе авторизации
 docker compose exec query-postgres psql -U user -d general_api_db
 
-# Run DB migrations manually
+# Применить миграции вручную
 docker compose exec query-api alembic upgrade head
 ```
 
 ---
 
-## WebSocket Test Client
+## WebSocket тест-клиент
 
 ```bash
-# Interactive test client (prompts for JWT token and train codes)
+# Интерактивный клиент (запрашивает JWT-токен и коды поездов)
 python processing_service/test.py
 ```
 
 ---
 
-## Project Structure
+## Структура проекта
 
 ```
 /
@@ -355,18 +364,18 @@ python processing_service/test.py
 ├── ingestion/
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── main.py              ← FastAPI app, lifespan
+│   ├── main.py              ← FastAPI-приложение, lifespan
 │   ├── routes.py            ← /health + /ws/telemetry
 │   └── models.py            ← TelemetryMessage, RouteInfo, Metric
 │
 ├── processing_service/
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── config.json          ← metric ranges, penalties, EMA alpha
-│   ├── main.py              ← Redis Stream consumer, batch DB writer
-│   ├── processing.py        ← health index computation
-│   ├── db.py                ← TimescaleDB schema + init
-│   └── test.py              ← WS test client
+│   ├── config.json          ← диапазоны параметров, штрафы, EMA alpha
+│   ├── main.py              ← потребитель Redis Stream, пакетная запись в БД
+│   ├── processing.py        ← вычисление индекса состояния
+│   ├── db.py                ← схема TimescaleDB + инициализация
+│   └── test.py              ← WebSocket тест-клиент
 │
 ├── query-api/
 │   ├── Dockerfile
@@ -374,29 +383,29 @@ python processing_service/test.py
 │   ├── alembic.ini
 │   ├── alembic/
 │   │   ├── env.py
-│   │   └── versions/        ← DB migrations
+│   │   └── versions/        ← файлы миграций
 │   └── app/
-│       ├── main.py          ← FastAPI app, router registration
-│       ├── database.py      ← engines, Redis dispatcher, lifespan
-│       ├── config/base.py   ← AppConfig (env vars)
-│       ├── auth/            ← register, login, JWT, roles
+│       ├── main.py          ← FastAPI-приложение, регистрация роутеров
+│       ├── database.py      ← движки БД, Redis-диспетчер, lifespan
+│       ├── config/base.py   ← AppConfig (переменные окружения)
+│       ├── auth/            ← регистрация, вход, JWT, роли
 │       ├── websocket/       ← /api/websocket/ws + ConnectionManager
 │       └── historic_data/   ← /api/historic/telemetry/{train_id}
 │
 ├── simulator/
 │   ├── Dockerfile
 │   ├── requirements.txt
-│   ├── config.py            ← LOCOS, ROUTES, HZ, URLs
-│   ├── main.py              ← async orchestrator + RTT monitor
-│   └── generators.py        ← sinusoidal telemetry generation
+│   ├── config.py            ← список локомотивов, маршруты, HZ, URL-адреса
+│   ├── main.py              ← асинхронный оркестратор + мониторинг RTT
+│   └── generators.py        ← синусоидальная генерация телеметрии
 │
-└── frontend/                ← React dashboard (wire to ws://localhost:8000)
+└── frontend/                ← React-дашборд (подключается к ws://localhost:8000)
 ```
 
 ---
 
-## Security Notes
+## Безопасность
 
-- The default `SECRET_KEY` in `query-api/app/auth/config.py` is a placeholder. Override it via environment variable in production.
-- The simulator's `config.py` contains a hardcoded test JWT for RTT monitoring — replace it with a real token obtained from `POST /api/auth/token`.
-- Default database credentials (`user` / `password`) are for local development only.
+- Значение `SECRET_KEY` в `query-api/app/auth/config.py` является заглушкой. В production-среде его необходимо переопределить через переменную окружения.
+- В `simulator/config.py` содержится захардкоженный тестовый JWT для мониторинга RTT — замените его реальным токеном, полученным через `POST /api/auth/token`.
+- Учётные данные БД (`user` / `password`) предназначены только для локальной разработки.
