@@ -11,6 +11,7 @@ CREATE TABLE IF NOT EXISTS telemetry (
     health_score     DOUBLE PRECISION,
     health_category  CHAR(255),
     alert_count      INTEGER,
+    top_impacts      JSONB,
     params           JSONB,
     route_info       JSONB
 );
@@ -25,8 +26,8 @@ CREATE INDEX IF NOT EXISTS idx_telemetry_train ON telemetry (train_id, time DESC
 """
 
 INSERT_SQL = """
-INSERT INTO telemetry (time, train_id, health_score, health_category, alert_count, params, route_info)
-VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb)
+INSERT INTO telemetry (time, train_id, health_score, health_category, alert_count, top_impacts, params, route_info)
+VALUES ($1, $2, $3, $4, $5, $6::jsonb, $7::jsonb, $8::jsonb)
 """
 
 

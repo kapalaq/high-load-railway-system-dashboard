@@ -36,16 +36,13 @@ _SEVERITY_RU: dict[str, str] = {
 }
 
 
-# ---------------------------------------------------------------------------
-# Result type
-# ---------------------------------------------------------------------------
-
 @dataclass
 class TelemetryRow:
     time: datetime
     train_id: str
     health_score: float
     health_category: str
+    top_impacts: list  # top-5 metrics by health penalty, descending
     alert_count: int
     params: dict       # enriched metrics — plain dict, easy to inspect
     route_info: dict   # raw route_info — plain dict
@@ -58,14 +55,11 @@ class TelemetryRow:
             self.health_score,
             self.health_category,
             self.alert_count,
+            json.dumps(self.top_impacts),
             json.dumps(self.params),
             json.dumps(self.route_info),
         )
 
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
 
 def _extract_loco_type(train_id: str) -> str:
     """'KZ8A-L001' → 'KZ8A', 'TE33A-L006' → 'TE33A'"""
@@ -80,6 +74,22 @@ def _metric_bounds(metric_def: dict) -> tuple[float, float]:
         bounds = rng["bounds"] if isinstance(rng, dict) else rng
         all_vals.extend(bounds)
     return min(all_vals), max(all_vals)
+
+
+def _normal_bounds(metric_def: dict) -> tuple[float, float]:
+    """(min, max) across all ranges whose severity is 'normal'."""
+    normal_vals: list[float] = []
+    for key, rng in metric_def["ranges"].items():
+        if isinstance(rng, dict):
+            if rng.get("severity", "normal") == "normal":
+                normal_vals.extend(rng["bounds"])
+        else:
+            # Legacy list format: severity == range key name
+            if key == "normal":
+                normal_vals.extend(rng)
+    if not normal_vals:
+        return _metric_bounds(metric_def)
+    return min(normal_vals), max(normal_vals)
 
 
 def _normalize(value: float, min_val: float, max_val: float) -> float:
@@ -107,10 +117,6 @@ def classify_status(value: float, metric_def: dict) -> tuple[str, str]:
     return "normal", "normal"
 
 
-# ---------------------------------------------------------------------------
-# Enrichment
-# ---------------------------------------------------------------------------
-
 def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, dict]:
     """
     Return enriched feature dict keyed by metric key.
@@ -129,6 +135,7 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
             mdef             = metrics_definition[key]
             range_key, severity = classify_status(value, mdef)
             min_val, max_val = _metric_bounds(mdef)
+            norm_min, norm_max = _normal_bounds(mdef)
             range_def        = mdef["ranges"][range_key]
 
             if isinstance(range_def, list):
@@ -153,6 +160,8 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
             rec         = ""
             min_val     = 0.0
             max_val     = 0.0
+            norm_min    = 0.0
+            norm_max    = 0.0
 
         enriched[key] = {
             "value":          value,
@@ -164,28 +173,31 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
             "recommendation": rec,
             "min":            min_val,
             "max":            max_val,
+            "norm_min":       max(norm_min, 0.1 * norm_max),
+            "norm_max":       norm_max,
         }
 
     return enriched
 
 
-# ---------------------------------------------------------------------------
-# Health index
-# ---------------------------------------------------------------------------
-
 def compute_health(
     train_id: str,
     metrics: list[dict],
     metrics_definition: dict,
-) -> tuple[float, str]:
+) -> tuple[float, str, list]:
     """
-    Return (health_score 0–100, category letter).
-    
+    Return (health_score 0–100, category letter, top_impacts).
+
     Starts at a baseline of 100 (perfect health).
     Subtracts defined penalties for metrics in warning/critical states.
     EMA smoothing is applied to the final score to prevent sudden jitter.
+
+    top_impacts — top-5 metrics by penalty, each entry:
+        {"metric": key, "status": string, "impact": float}
+        where impact = (penalty / max_penalty_for_metric) * 100
     """
     total_penalty = 0.0
+    per_metric: list[tuple[str, float, float]] = []  # (key, status, max_penalty)
 
     for m in metrics:
         key   = m["key"]
@@ -194,34 +206,41 @@ def compute_health(
         if key not in metrics_definition:
             continue
 
-        mdef = metrics_definition[key]
-        range_key, _ = classify_status(value, mdef)
-        
-        # Accumulate penalties based on the config (defaults to 0 if normal)
-        total_penalty += mdef.get("penalties", {}).get(range_key, 0.0)
+        mdef      = metrics_definition[key]
+        range_key, severity = classify_status(value, mdef)
+        penalties = mdef.get("penalties", {})
+        penalty   = penalties.get(range_key, 0.0)
+        max_pen   = max(penalties.values()) if penalties else 0.0
 
-    # Base health is 100; subtract penalties, floor at 0
+        total_penalty += penalty
+        if penalty > 0:
+            per_metric.append((key, severity, penalty, max_pen))
+
     raw_score = max(0.0, 100.0 - total_penalty)
 
-    # Apply EMA to the overall health score
     ema_key = (train_id, "overall_health")
-    prev = _ema_state.get(ema_key, raw_score)
+    prev    = _ema_state.get(ema_key, raw_score)
     smoothed = _EMA_ALPHA * raw_score + (1 - _EMA_ALPHA) * prev
     _ema_state[ema_key] = smoothed
 
-    # Determine category
-    category = "RUN" # Fallback
+    category = "БЕГИ"
     for letter, low, high in _CATEGORIES:
         if low <= smoothed <= high:
             category = letter
             break
 
-    return round(smoothed, 2), category
+    top5 = sorted(per_metric, key=lambda x: x[1], reverse=True)[:5]
+    top_impacts = [
+        {
+            "metric":  key,
+            "status":  severity,
+            "impact":  round((penalty / max_pen) * 100, 1) if max_pen else 0.0,
+        }
+        for key, severity, penalty, max_pen in top5
+    ]
 
+    return round(smoothed, 2), category, top_impacts
 
-# ---------------------------------------------------------------------------
-# Public entry point
-# ---------------------------------------------------------------------------
 
 def process(payload: dict) -> TelemetryRow:
     """
@@ -245,9 +264,9 @@ def process(payload: dict) -> TelemetryRow:
     loco_data          = _CONFIG["locomotives"].get(loco_type, {})
     metrics_definition = loco_data.get("metrics", {})
 
-    enriched                = enrich_metrics(metrics, metrics_definition)
-    health_score, category  = compute_health(train_id, metrics, metrics_definition)
-    alert_count             = sum(1 for f in enriched.values() if f["status"] != _SEVERITY_RU["normal"])
+    enriched                          = enrich_metrics(metrics, metrics_definition)
+    health_score, category, top_impacts = compute_health(train_id, metrics, metrics_definition)
+    alert_count                       = sum(1 for f in enriched.values() if f["status"] != _SEVERITY_RU["normal"])
 
     try:
         time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
@@ -260,6 +279,7 @@ def process(payload: dict) -> TelemetryRow:
         health_score=health_score,
         health_category=category,
         alert_count=alert_count,
+        top_impacts=top_impacts,
         params=enriched,
         route_info=route_info,
     )

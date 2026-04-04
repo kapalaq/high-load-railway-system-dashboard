@@ -107,6 +107,7 @@ async def ingest_loop(r: aio_redis.Redis, queue: asyncio.Queue) -> None:
                         "health_score":    row.health_score,
                         "health_category": row.health_category,
                         "alert_count":     row.alert_count,
+                        "top_impacts":     row.top_impacts,
                         "route_info":      row.route_info,
                         "params":          row.params,
                         "time":            row.time.isoformat(),

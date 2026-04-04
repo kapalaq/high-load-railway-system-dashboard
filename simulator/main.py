@@ -111,7 +111,7 @@ async def main() -> None:
     logger.info("Starting %d locomotive simulators at %.0f Hz → %s", len(LOCOS), HZ, INGESTION_URL)
     tasks = (
         [run_loco(loco) for loco in LOCOS]
-        + [run_rtt_monitor(loco) for loco in LOCOS]
+         + [run_rtt_monitor(loco) for loco in LOCOS]
         # + [run_validation_reporter()]
     )
     await asyncio.gather(*tasks)
