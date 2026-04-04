@@ -1,16 +1,24 @@
 from pydantic import BaseModel
 
 
+class GeoPoint(BaseModel):
+    latitude: float
+    longitude: float
+
+
 class Stop(BaseModel):
     name: str
     distance_km: float
     status: str  # "passed" | "upcoming" | "current"
+    latitude: float
+    longitude: float
 
 
 class RouteInfo(BaseModel):
     route_name: str
     total_distance_km: float
     current_position_km: float
+    current: GeoPoint
     stops: list[Stop]
 
 

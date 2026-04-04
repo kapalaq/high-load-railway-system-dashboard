@@ -5,10 +5,6 @@ import time
 from config import ROUTES
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
 def _iso_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -27,13 +23,31 @@ def _compute_stops(position_km: float, stops: list[dict]) -> list[dict]:
             status = "current"
         else:
             status = "upcoming"
-        result.append({"name": stop["name"], "distance_km": d, "status": status})
+        result.append({
+            "name": stop["name"],
+            "distance_km": d,
+            "status": status,
+            "latitude": stop["latitude"],
+            "longitude": stop["longitude"],
+        })
     return result
 
 
-# ---------------------------------------------------------------------------
-# Shared metric generators (same for both loco types)
-# ---------------------------------------------------------------------------
+def _interpolate_coords(position_km: float, stops: list[dict]) -> dict:
+    """Linearly interpolate lat/lng for the current position between two stops."""
+    for i in range(len(stops) - 1):
+        s0, s1 = stops[i], stops[i + 1]
+        if s0["distance_km"] <= position_km <= s1["distance_km"]:
+            seg_len = s1["distance_km"] - s0["distance_km"]
+            t = (position_km - s0["distance_km"]) / seg_len if seg_len > 0 else 0.0
+            return {
+                "latitude":  round(s0["latitude"]  + t * (s1["latitude"]  - s0["latitude"]),  6),
+                "longitude": round(s0["longitude"] + t * (s1["longitude"] - s0["longitude"]), 6),
+            }
+    # Beyond last stop — return last stop coords
+    last = stops[-1]
+    return {"latitude": last["latitude"], "longitude": last["longitude"]}
+
 
 def _gen_temp_oil(t: float, ph: float) -> float:
     """Oil temp: normally 55-75°C, occasionally drifts into warning (>80°C)."""
@@ -103,10 +117,6 @@ def _gen_brake_force(t: float, ph: float) -> float:
     return 0.0
 
 
-# ---------------------------------------------------------------------------
-# Per-type metric builders
-# ---------------------------------------------------------------------------
-
 def _build_metrics_kz8a(t: float, ph: float) -> list[dict]:
     speed = round(_clamp(80 + 25 * math.sin(t / 60 + ph) + random.gauss(0, 1.5), 0, 200), 2)
     motor_temp = round(_clamp(75 + 15 * math.sin(t / 45 + ph + 1.0) + random.gauss(0, 2), 0, 200), 1)
@@ -152,11 +162,6 @@ def _build_metrics_te33a(t: float, ph: float) -> list[dict]:
         {"key": "brake_force",         "name_ru": "Тормозное усилие",              "unit": "кПа",  "current_value": _gen_brake_force(t, ph)},
     ]
 
-
-# ---------------------------------------------------------------------------
-# Public API
-# ---------------------------------------------------------------------------
-
 def generate_telemetry(loco: dict, t: float) -> dict:
     ph = loco["phase_offset"]
     route = ROUTES[loco["route_key"]]
@@ -169,6 +174,7 @@ def generate_telemetry(loco: dict, t: float) -> dict:
     else:
         metrics = _build_metrics_te33a(t, ph)
 
+    stops = route["stops"]
     return {
         "train_id": loco["train_id"],
         "locomotive_type": loco["locomotive_type"],
@@ -177,7 +183,8 @@ def generate_telemetry(loco: dict, t: float) -> dict:
             "route_name": route["route_name"],
             "total_distance_km": route["total_distance_km"],
             "current_position_km": position_km,
-            "stops": _compute_stops(position_km, route["stops"]),
+            "current": _interpolate_coords(position_km, stops),
+            "stops": _compute_stops(position_km, stops),
         },
         "telemetry_config": {
             "metrics": metrics,

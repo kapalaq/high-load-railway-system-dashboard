@@ -17,18 +17,18 @@ ROUTES = {
         "route_name": "Astana - Karaganda - Almaty",
         "total_distance_km": 1211,
         "stops": [
-            {"name": "Astana",    "distance_km": 0,    "status": "passed"},
-            {"name": "Karaganda", "distance_km": 211,  "status": "upcoming"},
-            {"name": "Almaty",    "distance_km": 1211, "status": "upcoming"},
+            {"name": "Astana",    "distance_km": 0,    "status": "passed",   "latitude": 51.1811, "longitude": 71.4460},
+            {"name": "Karaganda", "distance_km": 211,  "status": "upcoming", "latitude": 49.8047, "longitude": 73.0884},
+            {"name": "Almaty",    "distance_km": 1211, "status": "upcoming", "latitude": 43.2220, "longitude": 76.8512},
         ],
     },
     "AKA_REV": {
         "route_name": "Almaty - Karaganda - Astana",
         "total_distance_km": 1211,
         "stops": [
-            {"name": "Almaty",    "distance_km": 0,    "status": "passed"},
-            {"name": "Karaganda", "distance_km": 1000, "status": "upcoming"},
-            {"name": "Astana",    "distance_km": 1211, "status": "upcoming"},
+            {"name": "Almaty",    "distance_km": 0,    "status": "passed",   "latitude": 43.2220, "longitude": 76.8512},
+            {"name": "Karaganda", "distance_km": 1000, "status": "upcoming", "latitude": 49.8047, "longitude": 73.0884},
+            {"name": "Astana",    "distance_km": 1211, "status": "upcoming", "latitude": 51.1811, "longitude": 71.4460},
         ],
     },
 }
