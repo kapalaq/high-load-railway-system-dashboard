@@ -9,6 +9,7 @@ class UserCreate(BaseModel):
     full_name: Optional[str] = None
     password: str
     role: UserRole = UserRole.DRIVER
+    train_id: Optional[str] = None
 
 
 class UserOut(BaseModel):
@@ -18,6 +19,7 @@ class UserOut(BaseModel):
     full_name: Optional[str]
     role: UserRole
     is_active: bool
+    train_id: Optional[str]
 
     model_config = {"from_attributes": True}
 
@@ -30,3 +32,4 @@ class Token(BaseModel):
 class TokenUser(BaseModel):
     id: str
     role: UserRole
+    train_id: Optional[str] = None

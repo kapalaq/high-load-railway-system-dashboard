@@ -13,3 +13,4 @@ class User(SQLModel, table=True):
     hashed_password: str
     role: UserRole = UserRole.DRIVER
     is_active: bool = True
+    train_id: Optional[str] = None

@@ -22,6 +22,6 @@ def login(
     session: Session = Depends(get_session),
 ):
     user = authenticate_user(form.username, form.password, session)
-    token = create_access_token(subject=user.id, role=user.role)
+    token = create_access_token(subject=user.id, role=user.role, train_id=user.train_id)
     return Token(access_token=token)
 

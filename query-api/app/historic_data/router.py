@@ -1,12 +1,11 @@
-from datetime import datetime, timezone
-
 from fastapi import APIRouter, Depends, Query
 from sqlmodel import Session
 
 from app.auth.dependencies import get_current_user
 from app.database import TIMESCALE_ENGINE
 from .schemas import TelemetryRecord
-from .service import get_telemetry
+from .service import get_telemetry_by_distance
+from fastapi import HTTPException
 
 historic_router = APIRouter(prefix="/api/historic", tags=["historic"])
 
@@ -16,14 +15,14 @@ def get_timescale_session():
         yield session
 
 
-@historic_router.get("/telemetry/{train_id}", response_model=list[TelemetryRecord])
+@historic_router.get("/telemetry/{train_id}", response_model=TelemetryRecord)
 def query_telemetry(
     train_id: str,
-    from_time: datetime | None = Query(None, alias="from", description="Start of time range (ISO 8601)"),
-    to_time: datetime | None = Query(None, alias="to", description="End of time range (ISO 8601)"),
-    limit: int = Query(100, ge=1, le=1000),
-    offset: int = Query(0, ge=0),
+    distance: float = Query(..., description="Route distance in km to find the closest record to"),
     session: Session = Depends(get_timescale_session),
     _current_user=Depends(get_current_user),
 ):
-    return get_telemetry(session, train_id, from_time, to_time, limit, offset)
+    record = get_telemetry_by_distance(session, train_id, distance)
+    if record is None:
+        raise HTTPException(status_code=404, detail="No telemetry found for this train")
+    return record

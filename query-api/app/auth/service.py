@@ -19,6 +19,7 @@ def register_user(data: UserCreate, session: Session) -> User:
         full_name=data.full_name,
         hashed_password=hash_password(data.password),
         role=data.role,
+        train_id=data.train_id,
     )
     session.add(user)
     session.commit()

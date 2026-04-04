@@ -16,11 +16,12 @@ def get_current_user(token: str = Depends(oauth2_scheme)) -> TokenUser:
         )
         user_id: str = payload.get("sub")
         role: str = payload.get("role")
+        train_id: str | None = payload.get("train_id")
         if user_id is None or role is None:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
             )
-        return TokenUser(id=user_id, role=UserRole(role))
+        return TokenUser(id=user_id, role=UserRole(role), train_id=train_id)
     except (JWTError, ValueError):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid token"
