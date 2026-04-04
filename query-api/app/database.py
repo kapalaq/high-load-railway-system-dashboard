@@ -16,6 +16,7 @@ from app.websocket.manager import ConnectionManager
 logger = logging.getLogger("uvicorn")
 
 DB_ENGINE = create_engine(CONFIG.DATABASE_URL)
+TIMESCALE_ENGINE = create_engine(CONFIG.TIMESCALE_URL)
 
 PUBSUB_CHANNEL = "metrics:live"
 
