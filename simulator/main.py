@@ -15,10 +15,6 @@ INGESTION_URL = os.getenv("INGESTION_URL", "ws://localhost:8001/ws/telemetry")
 HZ = float(os.getenv("HZ", "10"))
 RECONNECT_DELAY_S = float(os.getenv("RECONNECT_DELAY_S", "2"))
 
-# ---------------------------------------------------------------------------
-# Locomotive definitions
-# phase_offset spreads sine waves so each loco looks different on the dashboard
-# ---------------------------------------------------------------------------
 
 ROUTES = {
     "AKA": {
