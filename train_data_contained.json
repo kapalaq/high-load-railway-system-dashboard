@@ -6,133 +6,87 @@
       "speed": {
         "label": "Скорость",
         "unit": "км/ч",
-        "ranges": {
-          "normal":   [0, 114],
-          "warning":  [115, 120],
-          "critical": [121, 200]
-        },
+        "ranges": { "normal": [0, 114], "warning": [115, 120], "critical": [121, 200] },
         "penalties": { "warning": 5, "critical": 20 }
       },
       "temp_motor": {
-        "label": "Температура двигатель",
+        "label": "Температура двигателя",
         "unit": "°C",
-        "ranges": {
-          "normal":   [0, 85],
-          "warning":  [86, 100],
-          "critical": [101, 200]
-        },
+        "ranges": { "normal": [0, 85], "warning": [86, 100], "critical": [101, 200] },
         "penalties": { "warning": 8, "critical": 25 }
       },
       "temp_oil": {
         "label": "Температура масла",
         "unit": "°C",
-        "ranges": {
-          "normal":   [0, 80],
-          "warning":  [81, 95],
-          "critical": [96, 150]
-        },
+        "ranges": { "normal": [0, 80], "warning": [81, 95], "critical": [96, 150] },
         "penalties": { "warning": 6, "critical": 20 }
       },
       "temp_converters": {
         "label": "Температура преобразователей",
         "unit": "°C",
-        "ranges": {
-          "normal":   [0, 120],
-          "warning":  [121, 140],
-          "critical": [141, 200]
-        },
+        "ranges": { "normal": [0, 120], "warning": [121, 140], "critical": [141, 200] },
         "penalties": { "warning": 5, "critical": 18 }
       },
       "temp_air": {
         "label": "Температура воздуха",
         "unit": "°C",
-        "ranges": {
-          "normal":   [-20, 120],
-          "warning":  [121, 140],
-          "critical": [141, 200]
-        },
+        "ranges": { "normal": [-20, 120], "warning": [121, 140], "critical": [141, 200] },
         "penalties": { "warning": 4, "critical": 15 }
       },
       "pantograph_voltage": {
         "label": "Напряжение контактной сети",
         "unit": "кВ",
-        "ranges": {
-          "normal":   [20, 29],
-          "warning":  [18, 19.9],
-          "critical": [0, 17.9]
-        },
+        "ranges": { "normal": [20, 29], "warning": [18, 19.9], "critical": [0, 17.9] },
         "penalties": { "warning": 7, "critical": 22 }
       },
       "pressure_oil": {
         "label": "Давление масла в двигателе",
         "unit": "бар",
-        "ranges": {
-          "normal":   [3.0, 7.0],
-          "warning":  [2.0, 2.9],
-          "critical": [0, 1.9]
-        },
+        "ranges": { "normal": [3.0, 7.0], "warning": [2.0, 2.9], "critical": [0, 1.9] },
         "penalties": { "warning": 8, "critical": 25 }
       },
       "pressure_main_tank": {
         "label": "Давление главного резервуара",
         "unit": "бар",
-        "ranges": {
-          "normal":   [6.0, 9.0],
-          "warning":  [4.5, 5.9],
-          "critical": [0, 4.4]
-        },
+        "ranges": { "normal": [6.0, 9.0], "warning": [4.5, 5.9], "critical": [0, 4.4] },
         "penalties": { "warning": 10, "critical": 30 }
       },
       "pressure_brake": {
         "label": "Давление тормозной магистрали",
         "unit": "бар",
-        "ranges": {
-          "normal":   [4.5, 8.0],
-          "warning":  [8.1, 9.0],
-          "critical": [0, 4.4]
-        },
+        "ranges": { "normal": [4.5, 8.0], "warning": [8.1, 9.0], "critical": [0, 4.4] },
         "penalties": { "warning": 6, "critical": 20 }
       },
       "pressure_air": {
         "label": "Давление воздуха",
         "unit": "бар",
-        "ranges": {
-          "normal":   [0.4, 2.0],
-          "warning":  [2.1, 3.0],
-          "critical": [0, 0.3]
-        },
+        "ranges": { "normal": [0.4, 2.0], "warning": [2.1, 3.0], "critical": [0, 0.3] },
         "penalties": { "warning": 5, "critical": 15 }
       },
       "tractive_force": {
         "label": "Тяговое усилие",
         "unit": "кН",
         "max": 300,
-        "ranges": {
-          "normal":   [0, 260],
-          "warning":  [261, 285],
-          "critical": [286, 300]
-        },
+        "ranges": { "normal": [0, 260], "warning": [261, 285], "critical": [286, 300] },
         "penalties": { "warning": 5, "critical": 15 }
       },
-      "fuel_liters": {
-        "label": "Топливо",
-        "unit": "л",
+      "energy_usage": {
+        "label": "Потребление энергии",
+        "unit": "кВт·ч",
         "max": 1500,
-        "ranges": {
-          "normal":   [300, 1500],
-          "warning":  [100, 299],
-          "critical": [0, 99]
-        },
-        "penalties": { "warning": 10, "critical": 30 }
+        "ranges": { "normal": [0, 1200], "warning": [1201, 1400], "critical": [1401, 1500] },
+        "penalties": { "warning": 5, "critical": 15 }
+      },
+      "current_ampere": {
+        "label": "Ток",
+        "unit": "А",
+        "ranges": { "normal": [0, 2000], "warning": [2001, 2500], "critical": [2501, 3000] },
+        "penalties": { "warning": 8, "critical": 25 }
       },
       "brake_force": {
         "label": "Тормозное усилие",
         "unit": "кПа",
-        "ranges": {
-          "normal":   [0, 500],
-          "warning":  [501, 650],
-          "critical": [651, 1000]
-        },
+        "ranges": { "normal": [0, 500], "warning": [501, 650], "critical": [651, 1000] },
         "penalties": { "warning": 5, "critical": 15 }
       }
     }
@@ -144,123 +98,81 @@
       "speed": {
         "label": "Скорость",
         "unit": "км/ч",
-        "ranges": {
-          "normal":   [0, 100],
-          "warning":  [101, 110],
-          "critical": [111, 200]
-        },
+        "ranges": { "normal": [0, 100], "warning": [101, 110], "critical": [111, 200] },
         "penalties": { "warning": 5, "critical": 20 }
       },
       "temp_motor": {
-        "label": "Температура двигатель",
+        "label": "Температура двигателяС",
         "unit": "°C",
-        "ranges": {
-          "normal":   [0, 85],
-          "warning":  [86, 100],
-          "critical": [101, 200]
-        },
+        "ranges": { "normal": [0, 85], "warning": [86, 100], "critical": [101, 200] },
         "penalties": { "warning": 8, "critical": 25 }
       },
       "temp_oil": {
         "label": "Температура масла",
         "unit": "°C",
-        "ranges": {
-          "normal":   [0, 80],
-          "warning":  [81, 95],
-          "critical": [96, 150]
-        },
+        "ranges": { "normal": [0, 80], "warning": [81, 95], "critical": [96, 150] },
         "penalties": { "warning": 6, "critical": 20 }
       },
       "temp_converters": {
         "label": "Температура преобразователей",
         "unit": "°C",
-        "ranges": {
-          "normal":   [0, 120],
-          "warning":  [121, 140],
-          "critical": [141, 200]
-        },
+        "ranges": { "normal": [0, 120], "warning": [121, 140], "critical": [141, 200] },
         "penalties": { "warning": 5, "critical": 18 }
       },
       "temp_air": {
         "label": "Температура воздуха",
         "unit": "°C",
-        "ranges": {
-          "normal":   [-20, 120],
-          "warning":  [121, 140],
-          "critical": [141, 200]
-        },
+        "ranges": { "normal": [-20, 120], "warning": [121, 140], "critical": [141, 200] },
         "penalties": { "warning": 4, "critical": 15 }
       },
-      "engine_oil_pressure": {
+      "pressure_oil": {
         "label": "Давление масла в двигателе",
         "unit": "бар",
-        "ranges": {
-          "normal":   [3.5, 7.0],
-          "warning":  [3.0, 3.4],
-          "critical": [0, 2.9]
-        },
+        "ranges": { "normal": [3.5, 7.0], "warning": [3.0, 3.4], "critical": [0, 2.9] },
         "penalties": { "warning": 10, "critical": 30 }
       },
       "pressure_main_tank": {
         "label": "Давление главного резервуара",
         "unit": "бар",
-        "ranges": {
-          "normal":   [6.0, 9.0],
-          "warning":  [4.5, 5.9],
-          "critical": [0, 4.4]
-        },
+        "ranges": { "normal": [6.0, 9.0], "warning": [4.5, 5.9], "critical": [0, 4.4] },
         "penalties": { "warning": 10, "critical": 30 }
       },
       "pressure_brake": {
         "label": "Давление тормозной магистрали",
         "unit": "бар",
-        "ranges": {
-          "normal":   [4.5, 8.0],
-          "warning":  [8.1, 9.0],
-          "critical": [0, 4.4]
-        },
+        "ranges": { "normal": [4.5, 8.0], "warning": [8.1, 9.0], "critical": [0, 4.4] },
         "penalties": { "warning": 6, "critical": 20 }
       },
       "pressure_air": {
         "label": "Давление воздуха",
         "unit": "бар",
-        "ranges": {
-          "normal":   [0.4, 2.0],
-          "warning":  [2.1, 3.0],
-          "critical": [0, 0.3]
-        },
+        "ranges": { "normal": [0.4, 2.0], "warning": [2.1, 3.0], "critical": [0, 0.3] },
         "penalties": { "warning": 5, "critical": 15 }
       },
       "tractive_force": {
         "label": "Тяговое усилие",
         "unit": "кН",
         "max": 300,
-        "ranges": {
-          "normal":   [0, 260],
-          "warning":  [261, 285],
-          "critical": [286, 300]
-        },
+        "ranges": { "normal": [0, 260], "warning": [261, 285], "critical": [286, 300] },
         "penalties": { "warning": 5, "critical": 15 }
       },
       "fuel_liters": {
         "label": "Топливо",
         "unit": "л",
         "max": 1500,
-        "ranges": {
-          "normal":   [300, 1500],
-          "warning":  [100, 299],
-          "critical": [0, 99]
-        },
+        "ranges": { "normal": [300, 1500], "warning": [100, 299], "critical": [0, 99] },
         "penalties": { "warning": 10, "critical": 30 }
+      },
+      "current_ampere": {
+        "label": "Ток",
+        "unit": "А",
+        "ranges": { "normal": [0, 1500], "warning": [1501, 1800], "critical": [1801, 2000] },
+        "penalties": { "warning": 8, "critical": 25 }
       },
       "brake_force": {
         "label": "Тормозное усилие",
         "unit": "кПа",
-        "ranges": {
-          "normal":   [0, 500],
-          "warning":  [501, 650],
-          "critical": [651, 1000]
-        },
+        "ranges": { "normal": [0, 500], "warning": [501, 650], "critical": [651, 1000] },
         "penalties": { "warning": 5, "critical": 15 }
       }
     }

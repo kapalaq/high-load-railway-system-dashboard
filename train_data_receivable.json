@@ -1,32 +1,67 @@
-{
-  "train_id": "KZ8A-0042",
-  "locomotive_type": "Electric",
-  "timestamp": "2026-04-04T13:45:00Z",
-  "route_info": {
-    "route_name": "Astana - Karaganda - Almaty",
-    "total_distance_km": 1211,
-    "current_position_km": 115.5,
-    "stops": [
-      {"name": "Astana",    "distance_km": 0,    "status": "passed"},
-      {"name": "Karaganda", "distance_km": 211,  "status": "upcoming"},
-      {"name": "Almaty",    "distance_km": 1211, "status": "upcoming"}
-    ]
+[
+  {
+    "train_id": "KZ8A-0042",
+    "locomotive_type": "Electric",
+    "timestamp": "2026-04-04T13:45:00Z",
+    "route_info": {
+      "route_name": "Astana - Karaganda - Almaty",
+      "total_distance_km": 1211,
+      "current_position_km": 115.5,
+      "stops": [
+        {"name": "Astana",    "distance_km": 0,    "status": "passed"},
+        {"name": "Karaganda", "distance_km": 211,  "status": "upcoming"},
+        {"name": "Almaty",    "distance_km": 1211, "status": "upcoming"}
+      ]
+    },
+    "telemetry_config": {
+      "metrics": [
+        { "key": "speed",              "name_ru": "Скорость",                      "unit": "км/ч",  "current_value": 116.2  },
+        { "key": "temp_motor",         "name_ru": "Температура двигатель",         "unit": "°C",    "current_value": 92.0   },
+        { "key": "temp_oil",           "name_ru": "Температура масла",             "unit": "°C",    "current_value": 70.0   },
+        { "key": "temp_converters",    "name_ru": "Температура преобразователей",  "unit": "°C",    "current_value": 42.0   },
+        { "key": "temp_air",           "name_ru": "Температура воздуха",           "unit": "°C",    "current_value": 22.0   },
+        { "key": "pantograph_voltage", "name_ru": "Напряжение контактной сети",    "unit": "кВ",    "current_value": 24.8   },
+        { "key": "pressure_oil",       "name_ru": "Масло в двигателе",             "unit": "бар",   "current_value": 4.2    },
+        { "key": "pressure_main_tank", "name_ru": "Главный резервуар",             "unit": "бар",   "current_value": 3.2    },
+        { "key": "pressure_brake",     "name_ru": "Тормоза",                       "unit": "бар",   "current_value": 8.2    },
+        { "key": "pressure_air",       "name_ru": "Воздух",                        "unit": "бар",   "current_value": 1.2    },
+        { "key": "tractive_force",     "name_ru": "Тяговое усилие",                "unit": "кН",    "current_value": 245.0  },
+        { "key": "energy_usage",       "name_ru": "Потребление энергии",           "unit": "кВт·ч", "current_value": 214.0  },
+        { "key": "current_ampere",     "name_ru": "Ток",                           "unit": "А",     "current_value": 1450.0 },
+        { "key": "brake_force",        "name_ru": "Тормозное усилие",              "unit": "кПа",   "current_value": 0.0    }
+      ]
+    }
   },
-  "telemetry_config": {
-    "metrics": [
-      { "key": "speed",              "name_ru": "Скорость",                      "unit": "км/ч", "current_value": 116.2 },
-      { "key": "temp_motor",         "name_ru": "Температура двигатель",         "unit": "°C",   "current_value": 92.0  },
-      { "key": "temp_oil",           "name_ru": "Температура масла",             "unit": "°C",   "current_value": 70.0  },
-      { "key": "temp_converters",    "name_ru": "Температура преобразователей",  "unit": "°C",   "current_value": 42.0  },
-      { "key": "temp_air",           "name_ru": "Температура воздуха",           "unit": "°C",   "current_value": 22.0  },
-      { "key": "pantograph_voltage", "name_ru": "Напряжение контактной сети",    "unit": "кВ",   "current_value": 24.8  },
-      { "key": "pressure_oil",       "name_ru": "Масло в двигателе",             "unit": "бар",  "current_value": 4.2   },
-      { "key": "pressure_main_tank", "name_ru": "Главный резервуар",             "unit": "бар",  "current_value": 3.2   },
-      { "key": "pressure_brake",     "name_ru": "Тормоза",                       "unit": "бар",  "current_value": 8.2   },
-      { "key": "pressure_air",       "name_ru": "Воздух",                        "unit": "бар",  "current_value": 1.2   },
-      { "key": "tractive_force",     "name_ru": "Тяговое усилие",                "unit": "кН",   "current_value": 245.0 },
-      { "key": "fuel_liters",        "name_ru": "Топливо",                       "unit": "л",    "current_value": 214.0 },
-      { "key": "brake_force",        "name_ru": "Тормозное усилие",              "unit": "кПа",  "current_value": 0.0   }
-    ]
+  {
+    "train_id": "TE33A-0007",
+    "locomotive_type": "Diesel",
+    "timestamp": "2026-04-04T13:45:00Z",
+    "route_info": {
+      "route_name": "Almaty - Karaganda - Astana",
+      "total_distance_km": 1211,
+      "current_position_km": 540.0,
+      "stops": [
+        {"name": "Almaty",    "distance_km": 0,    "status": "passed"},
+        {"name": "Karaganda", "distance_km": 1000, "status": "upcoming"},
+        {"name": "Astana",    "distance_km": 1211, "status": "upcoming"}
+      ]
+    },
+    "telemetry_config": {
+      "metrics": [
+        { "key": "speed",              "name_ru": "Скорость",                     "unit": "км/ч", "current_value": 78.5   },
+        { "key": "temp_motor",         "name_ru": "Температура двигатель",        "unit": "°C",   "current_value": 81.0   },
+        { "key": "temp_oil",           "name_ru": "Температура масла",            "unit": "°C",   "current_value": 74.0   },
+        { "key": "temp_converters",    "name_ru": "Температура преобразователей", "unit": "°C",   "current_value": 55.0   },
+        { "key": "temp_air",           "name_ru": "Температура воздуха",          "unit": "°C",   "current_value": 26.0   },
+        { "key": "pressure_oil",       "name_ru": "Масло в двигателе",            "unit": "бар",  "current_value": 5.1    },
+        { "key": "pressure_main_tank", "name_ru": "Главный резервуар",            "unit": "бар",  "current_value": 7.4    },
+        { "key": "pressure_brake",     "name_ru": "Тормоза",                      "unit": "бар",  "current_value": 6.1    },
+        { "key": "pressure_air",       "name_ru": "Воздух",                       "unit": "бар",  "current_value": 1.0    },
+        { "key": "tractive_force",     "name_ru": "Тяговое усилие",               "unit": "кН",   "current_value": 198.0  },
+        { "key": "fuel_liters",        "name_ru": "Топливо",                      "unit": "л",    "current_value": 1050.0 },
+        { "key": "current_ampere",     "name_ru": "Ток",                          "unit": "А",    "current_value": 980.0  },
+        { "key": "brake_force",        "name_ru": "Тормозное усилие",             "unit": "кПа",  "current_value": 0.0    }
+      ]
+    }
   }
-}
+]

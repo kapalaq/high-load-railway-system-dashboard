@@ -77,6 +77,23 @@ def _gen_fuel_liters(t: float, ph: float, tank_max: float = 1500) -> float:
     return round(_clamp(tank_max - drained + random.gauss(0, 2), 0, tank_max), 1)
 
 
+def _gen_energy_usage(t: float, ph: float) -> float:
+    """Cumulative energy consumption for electric loco, resets each 2h cycle."""
+    drain_cycle = 7200
+    consumed = (t % drain_cycle) / drain_cycle * 1300 + random.gauss(0, 5)
+    return round(_clamp(consumed, 0, 1500), 1)
+
+
+def _gen_current_kz8a(t: float, ph: float) -> float:
+    """Traction current for electric loco: normally 800-2000 A, max 3000."""
+    return round(_clamp(1400 + 400 * math.sin(t / 55 + ph + 0.2) + random.gauss(0, 30), 0, 3000), 0)
+
+
+def _gen_current_te33a(t: float, ph: float) -> float:
+    """Generator output current for diesel loco: normally 600-1500 A, max 2000."""
+    return round(_clamp(1000 + 350 * math.sin(t / 60 + ph + 0.5) + random.gauss(0, 25), 0, 2000), 0)
+
+
 def _gen_brake_force(t: float, ph: float) -> float:
     """Brake force in kPa: mostly 0 (released), brief spikes when braking."""
     cycle = 90  # braking event every ~90s
@@ -107,16 +124,17 @@ def _build_metrics_kz8a(t: float, ph: float) -> list[dict]:
         {"key": "pressure_main_tank", "name_ru": "Главный резервуар",             "unit": "бар",  "current_value": _gen_pressure_main_tank(t, ph)},
         {"key": "pressure_brake",     "name_ru": "Тормоза",                       "unit": "бар",  "current_value": _gen_pressure_brake(t, ph)},
         {"key": "pressure_air",       "name_ru": "Воздух",                        "unit": "бар",  "current_value": _gen_pressure_air(t, ph)},
-        {"key": "tractive_force",     "name_ru": "Тяговое усилие",                "unit": "кН",   "current_value": _gen_tractive_force(t, ph)},
-        {"key": "fuel_liters",        "name_ru": "Топливо",                       "unit": "л",    "current_value": _gen_fuel_liters(t, ph)},
-        {"key": "brake_force",        "name_ru": "Тормозное усилие",              "unit": "кПа",  "current_value": _gen_brake_force(t, ph)},
+        {"key": "tractive_force",     "name_ru": "Тяговое усилие",                "unit": "кН",    "current_value": _gen_tractive_force(t, ph)},
+        {"key": "energy_usage",       "name_ru": "Потребление энергии",           "unit": "кВт·ч", "current_value": _gen_energy_usage(t, ph)},
+        {"key": "current_ampere",     "name_ru": "Ток",                           "unit": "А",     "current_value": _gen_current_kz8a(t, ph)},
+        {"key": "brake_force",        "name_ru": "Тормозное усилие",              "unit": "кПа",   "current_value": _gen_brake_force(t, ph)},
     ]
 
 
 def _build_metrics_te33a(t: float, ph: float) -> list[dict]:
     speed = round(_clamp(60 + 20 * math.sin(t / 70 + ph) + random.gauss(0, 1.5), 0, 200), 2)
     motor_temp = round(_clamp(75 + 12 * math.sin(t / 55 + ph + 1.0) + random.gauss(0, 2), 0, 200), 1)
-    oil_pressure = round(_clamp(5.0 + 1.2 * math.sin(t / 50 + ph) + random.gauss(0, 0.2), 0, 10), 2)
+    pressure_oil = round(_clamp(5.0 + 1.2 * math.sin(t / 50 + ph) + random.gauss(0, 0.2), 0, 10), 2)
 
     return [
         {"key": "speed",               "name_ru": "Скорость",                      "unit": "км/ч", "current_value": speed},
@@ -124,12 +142,13 @@ def _build_metrics_te33a(t: float, ph: float) -> list[dict]:
         {"key": "temp_oil",            "name_ru": "Температура масла",             "unit": "°C",   "current_value": _gen_temp_oil(t, ph)},
         {"key": "temp_converters",     "name_ru": "Температура преобразователей",  "unit": "°C",   "current_value": _gen_temp_converters(t, ph)},
         {"key": "temp_air",            "name_ru": "Температура воздуха",           "unit": "°C",   "current_value": _gen_temp_air(t, ph)},
-        {"key": "engine_oil_pressure", "name_ru": "Давление масла (двигатель)",    "unit": "бар",  "current_value": oil_pressure},
+        {"key": "pressure_oil",        "name_ru": "Масло в двигателе",             "unit": "бар",  "current_value": pressure_oil},
         {"key": "pressure_main_tank",  "name_ru": "Главный резервуар",             "unit": "бар",  "current_value": _gen_pressure_main_tank(t, ph)},
         {"key": "pressure_brake",      "name_ru": "Тормоза",                       "unit": "бар",  "current_value": _gen_pressure_brake(t, ph)},
         {"key": "pressure_air",        "name_ru": "Воздух",                        "unit": "бар",  "current_value": _gen_pressure_air(t, ph)},
         {"key": "tractive_force",      "name_ru": "Тяговое усилие",                "unit": "кН",   "current_value": _gen_tractive_force(t, ph)},
         {"key": "fuel_liters",         "name_ru": "Топливо",                       "unit": "л",    "current_value": _gen_fuel_liters(t, ph)},
+        {"key": "current_ampere",      "name_ru": "Ток",                           "unit": "А",    "current_value": _gen_current_te33a(t, ph)},
         {"key": "brake_force",         "name_ru": "Тормозное усилие",              "unit": "кПа",  "current_value": _gen_brake_force(t, ph)},
     ]
 
