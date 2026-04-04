@@ -25,7 +25,3 @@ def login(
     token = create_access_token(subject=user.id, role=user.role)
     return Token(access_token=token)
 
-@auth_router.post("/test", response_model=UserOut, status_code=201)
-def register(data: UserCreate, session: Session = Depends(get_session)):
-    user = register_user(data, session)
-    return user
