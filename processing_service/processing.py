@@ -85,13 +85,10 @@ def _normalize(value: float, min_val: float, max_val: float) -> float:
 def classify_status(value: float, metric_def: dict) -> str:
     """Return 'ok', 'warning', or 'critical' based on defined ranges."""
     ranges = metric_def["ranges"]
-    crit = ranges["critical"]
-    if crit[0] <= value <= crit[1]:
-        return "critical"
-    warn = ranges["warning"]
-    if warn[0] <= value <= warn[1]:
-        return "warning"
-    return "ok"
+    for k, v in ranges.items():
+        if v[0] <= value <= v[1]:
+            return k
+    return "normal"
 
 
 # ---------------------------------------------------------------------------

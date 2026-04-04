@@ -22,10 +22,10 @@
             "critical": [121, 200]
           },
           "penalties": { "warning": 5, "critical": 20 },
-          "warning_message": "Speed elevated",
-          "critical_message": "Speed critically high — risk of derailment",
-          "warning_recommendation": "Reduce speed gradually to within normal operating range.",
-          "critical_recommendation": "Apply emergency braking immediately and alert dispatcher."
+          "warning_message": "Скорость повышена",
+          "critical_message": "Скорость критически высокая — риск схода с рельсов",
+          "warning_recommendation": "Постепенно снизьте скорость до нормального рабочего диапазона.",
+          "critical_recommendation": "Немедленно применить экстренное торможение и оповестить диспетчера."
         },
         "temp_motor": {
           "label": "Температура двигатель",
@@ -36,10 +36,10 @@
             "critical": [101, 200]
           },
           "penalties": { "warning": 8, "critical": 25 },
-          "warning_message": "Motor temperature elevated",
-          "critical_message": "Motor overheating — risk of seizure",
-          "warning_recommendation": "Reduce traction load and monitor cooling system.",
-          "critical_recommendation": "Stop the train and inspect the motor immediately."
+          "warning_message": "Температура двигателя повышена",
+          "critical_message": "Перегрев двигателя — риск заклинивания",
+          "warning_recommendation": "Снизьте тяговую нагрузку и следите за системой охлаждения.",
+          "critical_recommendation": "Немедленно остановите поезд и проверьте двигатель."
         },
         "temp_oil": {
           "label": "Температура масла",
@@ -50,10 +50,10 @@
             "critical": [96, 150]
           },
           "penalties": { "warning": 6, "critical": 20 },
-          "warning_message": "Oil temperature elevated",
-          "critical_message": "Oil overheating — lubrication failure risk",
-          "warning_recommendation": "Check oil cooling system at next stop.",
-          "critical_recommendation": "Stop engine immediately and inspect oil system."
+          "warning_message": "Температура масла повышена",
+          "critical_message": "Перегрев масла — риск отказа смазки",
+          "warning_recommendation": "Проверьте систему охлаждения масла на следующей остановке.",
+          "critical_recommendation": "Немедленно остановите двигатель и проверьте масляную систему."
         },
         "temp_converters": {
           "label": "Температура преобразователей",
@@ -64,10 +64,10 @@
             "critical": [141, 200]
           },
           "penalties": { "warning": 5, "critical": 18 },
-          "warning_message": "Converter temperature elevated",
-          "critical_message": "Converter overheating — electrical failure risk",
-          "warning_recommendation": "Reduce converter load.",
-          "critical_recommendation": "Shut down converters and stop for inspection."
+          "warning_message": "Температура преобразователей повышена",
+          "critical_message": "Перегрев преобразователей — риск электрического отказа",
+          "warning_recommendation": "Снизьте нагрузку на преобразователи.",
+          "critical_recommendation": "Отключите преобразователи и остановитесь для проверки."
         },
         "temp_air": {
           "label": "Температура воздуха",
@@ -78,10 +78,10 @@
             "critical": [141, 200]
           },
           "penalties": { "warning": 4, "critical": 15 },
-          "warning_message": "Air temperature elevated",
-          "critical_message": "Air temperature critical",
-          "warning_recommendation": "Check air cooling system.",
-          "critical_recommendation": "Stop and inspect air conditioning immediately."
+          "warning_message": "Температура воздуха повышена",
+          "critical_message": "Температура воздуха критическая",
+          "warning_recommendation": "Проверьте систему охлаждения воздуха.",
+          "critical_recommendation": "Немедленно остановитесь и проверьте систему кондиционирования."
         },
         "pantograph_voltage": {
           "label": "Напряжение контактной сети",
@@ -92,10 +92,10 @@
             "critical": [0, 17.9]
           },
           "penalties": { "warning": 7, "critical": 22 },
-          "warning_message": "Contact wire voltage below normal",
-          "critical_message": "Critical low voltage — electrical systems at risk",
-          "warning_recommendation": "Inspect pantograph and report to dispatcher.",
-          "critical_recommendation": "Switch to backup power and halt non-essential systems."
+          "warning_message": "Напряжение контактного провода ниже нормы",
+          "critical_message": "Критически низкое напряжение — угроза электрическим системам",
+          "warning_recommendation": "Проверьте пантограф и сообщите диспетчеру.",
+          "critical_recommendation": "Переключитесь на резервное питание и отключите второстепенные системы."
         },
         "pressure_oil": {
           "label": "Давление масла в двигателе",
@@ -106,10 +106,10 @@
             "critical": [0, 1.9]
           },
           "penalties": { "warning": 8, "critical": 25 },
-          "warning_message": "Engine oil pressure below normal",
-          "critical_message": "Critical oil pressure drop — engine damage imminent",
-          "warning_recommendation": "Check oil level at next stop.",
-          "critical_recommendation": "Stop engine immediately and check for oil leaks."
+          "warning_message": "Давление масла в двигателе ниже нормы",
+          "critical_message": "Критическое падение давления масла — угроза повреждения двигателя",
+          "warning_recommendation": "Проверьте уровень масла на следующей остановке.",
+          "critical_recommendation": "Немедленно остановите двигатель и проверьте наличие утечек масла."
         },
         "pressure_main_tank": {
           "label": "Давление главного резервуара",
@@ -120,10 +120,10 @@
             "critical": [0, 4.4]
           },
           "penalties": { "warning": 10, "critical": 30 },
-          "warning_message": "Main tank pressure below normal",
-          "critical_message": "Critical main tank pressure loss",
-          "warning_recommendation": "Check compressor and tank at next stop.",
-          "critical_recommendation": "Stop immediately and inspect air system."
+          "warning_message": "Давление главного резервуара ниже нормы",
+          "critical_message": "Критическая потеря давления в главном резервуаре",
+          "warning_recommendation": "Проверьте компрессор и резервуар на следующей остановке.",
+          "critical_recommendation": "Немедленно остановитесь и проверьте пневматическую систему."
         },
         "pressure_brake": {
           "label": "Давление тормозной магистрали",
@@ -134,10 +134,10 @@
             "critical": [0, 4.4]
           },
           "penalties": { "warning": 6, "critical": 20 },
-          "warning_message": "Brake line pressure anomaly",
-          "critical_message": "Critical brake pressure loss — braking impaired",
-          "warning_recommendation": "Check brake lines for leaks at next stop.",
-          "critical_recommendation": "Reduce speed immediately and perform emergency brake inspection."
+          "warning_message": "Аномалия давления в тормозной магистрали",
+          "critical_message": "Критическая потеря давления в тормозах — нарушение торможения",
+          "warning_recommendation": "Проверьте тормозные магистрали на утечки на следующей остановке.",
+          "critical_recommendation": "Немедленно снизьте скорость и выполните экстренную проверку тормозов."
         },
         "pressure_air": {
           "label": "Давление воздуха",
@@ -148,10 +148,10 @@
             "critical": [0, 0.3]
           },
           "penalties": { "warning": 5, "critical": 15 },
-          "warning_message": "Air pressure elevated",
-          "critical_message": "Air pressure critical",
-          "warning_recommendation": "Check air compressor.",
-          "critical_recommendation": "Stop and inspect air system immediately."
+          "warning_message": "Давление воздуха повышено",
+          "critical_message": "Давление воздуха критическое",
+          "warning_recommendation": "Проверьте воздушный компрессор.",
+          "critical_recommendation": "Немедленно остановитесь и проверьте пневматическую систему."
         },
         "tractive_force": {
           "label": "Тяговое усилие",
@@ -162,10 +162,10 @@
             "critical": [286, 300]
           },
           "penalties": { "warning": 5, "critical": 15 },
-          "warning_message": "Tractive force elevated",
-          "critical_message": "Tractive force critically high — mechanical stress",
-          "warning_recommendation": "Reduce throttle.",
-          "critical_recommendation": "Reduce throttle immediately to prevent traction motor damage."
+          "warning_message": "Тяговое усилие повышено",
+          "critical_message": "Тяговое усилие критически высокое — механическое напряжение",
+          "warning_recommendation": "Снизьте тягу.",
+          "critical_recommendation": "Немедленно снизьте тягу во избежание повреждения тягового двигателя."
         },
         "fuel_liters": {
           "label": "Топливо",
@@ -176,10 +176,10 @@
             "critical": [0, 99]
           },
           "penalties": { "warning": 10, "critical": 30 },
-          "warning_message": "Fuel level low",
-          "critical_message": "Fuel critically low — risk of stall",
-          "warning_recommendation": "Plan refuel at next available stop.",
-          "critical_recommendation": "Stop at nearest depot for emergency refuelling."
+          "warning_message": "Уровень топлива низкий",
+          "critical_message": "Топливо на критически низком уровне — риск остановки",
+          "warning_recommendation": "Запланируйте дозаправку на ближайшей возможной остановке.",
+          "critical_recommendation": "Остановитесь на ближайшем депо для экстренной заправки."
         },
         "brake_force": {
           "label": "Тормозное усилие",
@@ -190,10 +190,10 @@
             "critical": [651, 1000]
           },
           "penalties": { "warning": 5, "critical": 15 },
-          "warning_message": "Brake force elevated",
-          "critical_message": "Brake force critically high",
-          "warning_recommendation": "Check brake system at next stop.",
-          "critical_recommendation": "Inspect brakes immediately — risk of mechanical damage."
+          "warning_message": "Тормозное усилие повышено",
+          "critical_message": "Тормозное усилие критически высокое",
+          "warning_recommendation": "Проверьте тормозную систему на следующей остановке.",
+          "critical_recommendation": "Немедленно проверьте тормоза — риск механического повреждения."
         }
       }
     },
@@ -210,10 +210,10 @@
             "critical": [111, 200]
           },
           "penalties": { "warning": 5, "critical": 20 },
-          "warning_message": "Speed elevated",
-          "critical_message": "Speed critically high — risk of derailment",
-          "warning_recommendation": "Reduce speed gradually to within normal operating range.",
-          "critical_recommendation": "Apply emergency braking immediately and alert dispatcher."
+          "warning_message": "Скорость повышена",
+          "critical_message": "Скорость критически высокая — риск схода с рельсов",
+          "warning_recommendation": "Постепенно снизьте скорость до нормального рабочего диапазона.",
+          "critical_recommendation": "Немедленно применить экстренное торможение и оповестить диспетчера."
         },
         "temp_motor": {
           "label": "Температура двигатель",
@@ -224,10 +224,10 @@
             "critical": [101, 200]
           },
           "penalties": { "warning": 8, "critical": 25 },
-          "warning_message": "Motor temperature elevated",
-          "critical_message": "Motor overheating — risk of seizure",
-          "warning_recommendation": "Reduce traction load and monitor cooling system.",
-          "critical_recommendation": "Stop the train and inspect the motor immediately."
+          "warning_message": "Температура двигателя повышена",
+          "critical_message": "Перегрев двигателя — риск заклинивания",
+          "warning_recommendation": "Снизьте тяговую нагрузку и следите за системой охлаждения.",
+          "critical_recommendation": "Немедленно остановите поезд и проверьте двигатель."
         },
         "temp_oil": {
           "label": "Температура масла",
@@ -238,10 +238,10 @@
             "critical": [96, 150]
           },
           "penalties": { "warning": 6, "critical": 20 },
-          "warning_message": "Oil temperature elevated",
-          "critical_message": "Oil overheating — lubrication failure risk",
-          "warning_recommendation": "Check oil cooling system at next stop.",
-          "critical_recommendation": "Stop engine immediately and inspect oil system."
+          "warning_message": "Температура масла повышена",
+          "critical_message": "Перегрев масла — риск отказа смазки",
+          "warning_recommendation": "Проверьте систему охлаждения масла на следующей остановке.",
+          "critical_recommendation": "Немедленно остановите двигатель и проверьте масляную систему."
         },
         "temp_converters": {
           "label": "Температура преобразователей",
@@ -252,10 +252,10 @@
             "critical": [141, 200]
           },
           "penalties": { "warning": 5, "critical": 18 },
-          "warning_message": "Converter temperature elevated",
-          "critical_message": "Converter overheating — electrical failure risk",
-          "warning_recommendation": "Reduce converter load.",
-          "critical_recommendation": "Shut down converters and stop for inspection."
+          "warning_message": "Температура преобразователей повышена",
+          "critical_message": "Перегрев преобразователей — риск электрического отказа",
+          "warning_recommendation": "Снизьте нагрузку на преобразователи.",
+          "critical_recommendation": "Отключите преобразователи и остановитесь для проверки."
         },
         "temp_air": {
           "label": "Температура воздуха",
@@ -266,10 +266,10 @@
             "critical": [141, 200]
           },
           "penalties": { "warning": 4, "critical": 15 },
-          "warning_message": "Air temperature elevated",
-          "critical_message": "Air temperature critical",
-          "warning_recommendation": "Check air cooling system.",
-          "critical_recommendation": "Stop and inspect air conditioning immediately."
+          "warning_message": "Температура воздуха повышена",
+          "critical_message": "Температура воздуха критическая",
+          "warning_recommendation": "Проверьте систему охлаждения воздуха.",
+          "critical_recommendation": "Немедленно остановитесь и проверьте систему кондиционирования."
         },
         "engine_oil_pressure": {
           "label": "Давление масла в двигателе",
@@ -280,10 +280,10 @@
             "critical": [0, 2.9]
           },
           "penalties": { "warning": 10, "critical": 30 },
-          "warning_message": "Engine oil pressure below normal",
-          "critical_message": "Critical oil pressure drop — engine damage imminent",
-          "warning_recommendation": "Check oil level at next stop.",
-          "critical_recommendation": "Stop engine immediately and check for oil leaks."
+          "warning_message": "Давление масла в двигателе ниже нормы",
+          "critical_message": "Критическое падение давления масла — угроза повреждения двигателя",
+          "warning_recommendation": "Проверьте уровень масла на следующей остановке.",
+          "critical_recommendation": "Немедленно остановите двигатель и проверьте наличие утечек масла."
         },
         "pressure_main_tank": {
           "label": "Давление главного резервуара",
@@ -294,10 +294,10 @@
             "critical": [0, 4.4]
           },
           "penalties": { "warning": 10, "critical": 30 },
-          "warning_message": "Main tank pressure below normal",
-          "critical_message": "Critical main tank pressure loss",
-          "warning_recommendation": "Check compressor and tank at next stop.",
-          "critical_recommendation": "Stop immediately and inspect air system."
+          "warning_message": "Давление главного резервуара ниже нормы",
+          "critical_message": "Критическая потеря давления в главном резервуаре",
+          "warning_recommendation": "Проверьте компрессор и резервуар на следующей остановке.",
+          "critical_recommendation": "Немедленно остановитесь и проверьте пневматическую систему."
         },
         "pressure_brake": {
           "label": "Давление тормозной магистрали",
@@ -308,10 +308,10 @@
             "critical": [0, 4.4]
           },
           "penalties": { "warning": 6, "critical": 20 },
-          "warning_message": "Brake line pressure anomaly",
-          "critical_message": "Critical brake pressure loss — braking impaired",
-          "warning_recommendation": "Check brake lines for leaks at next stop.",
-          "critical_recommendation": "Reduce speed immediately and perform emergency brake inspection."
+          "warning_message": "Аномалия давления в тормозной магистрали",
+          "critical_message": "Критическая потеря давления в тормозах — нарушение торможения",
+          "warning_recommendation": "Проверьте тормозные магистрали на утечки на следующей остановке.",
+          "critical_recommendation": "Немедленно снизьте скорость и выполните экстренную проверку тормозов."
         },
         "pressure_air": {
           "label": "Давление воздуха",
@@ -322,10 +322,10 @@
             "critical": [0, 0.3]
           },
           "penalties": { "warning": 5, "critical": 15 },
-          "warning_message": "Air pressure elevated",
-          "critical_message": "Air pressure critical",
-          "warning_recommendation": "Check air compressor.",
-          "critical_recommendation": "Stop and inspect air system immediately."
+          "warning_message": "Давление воздуха повышено",
+          "critical_message": "Давление воздуха критическое",
+          "warning_recommendation": "Проверьте воздушный компрессор.",
+          "critical_recommendation": "Немедленно остановитесь и проверьте пневматическую систему."
         },
         "tractive_force": {
           "label": "Тяговое усилие",
@@ -336,10 +336,10 @@
             "critical": [286, 300]
           },
           "penalties": { "warning": 5, "critical": 15 },
-          "warning_message": "Tractive force elevated",
-          "critical_message": "Tractive force critically high — mechanical stress",
-          "warning_recommendation": "Reduce throttle.",
-          "critical_recommendation": "Reduce throttle immediately to prevent traction motor damage."
+          "warning_message": "Тяговое усилие повышено",
+          "critical_message": "Тяговое усилие критически высокое — механическое напряжение",
+          "warning_recommendation": "Снизьте тягу.",
+          "critical_recommendation": "Немедленно снизьте тягу во избежание повреждения тягового двигателя."
         },
         "fuel_liters": {
           "label": "Топливо",
@@ -350,10 +350,10 @@
             "critical": [0, 99]
           },
           "penalties": { "warning": 10, "critical": 30 },
-          "warning_message": "Fuel level low",
-          "critical_message": "Fuel critically low — risk of stall",
-          "warning_recommendation": "Plan refuel at next available stop.",
-          "critical_recommendation": "Stop at nearest depot for emergency refuelling."
+          "warning_message": "Уровень топлива низкий",
+          "critical_message": "Топливо на критически низком уровне — риск остановки",
+          "warning_recommendation": "Запланируйте дозаправку на ближайшей возможной остановке.",
+          "critical_recommendation": "Остановитесь на ближайшем депо для экстренной заправки."
         },
         "brake_force": {
           "label": "Тормозное усилие",
@@ -364,10 +364,10 @@
             "critical": [651, 1000]
           },
           "penalties": { "warning": 5, "critical": 15 },
-          "warning_message": "Brake force elevated",
-          "critical_message": "Brake force critically high",
-          "warning_recommendation": "Check brake system at next stop.",
-          "critical_recommendation": "Inspect brakes immediately — risk of mechanical damage."
+          "warning_message": "Тормозное усилие повышено",
+          "critical_message": "Тормозное усилие критически высокое",
+          "warning_recommendation": "Проверьте тормозную систему на следующей остановке.",
+          "critical_recommendation": "Немедленно проверьте тормоза — риск механического повреждения."
         }
       }
     }

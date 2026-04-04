@@ -33,7 +33,6 @@ class AppConfig:
 
 async def flush_batch(batch: list, pg_pool: asyncpg.Pool, retries: int = 3) -> None:
     for attempt in range(retries):
-        log.info(f"ATTEMPT NUMBER {attempt}")
         try:
             async with pg_pool.acquire() as conn:
                 await conn.executemany(INSERT_SQL, batch)
@@ -47,7 +46,6 @@ async def flush_batch(batch: list, pg_pool: asyncpg.Pool, retries: int = 3) -> N
 
 
 async def db_worker(queue: asyncio.Queue, pg_pool: asyncpg.Pool, cfg: AppConfig) -> None:
-    log.info("db_worker started")
     batch: list = []
     interval = cfg.flush_interval_ms / 1000
     flush_deadline = asyncio.get_event_loop().time() + interval
@@ -65,12 +63,10 @@ async def db_worker(queue: asyncio.Queue, pg_pool: asyncpg.Pool, cfg: AppConfig)
         now = asyncio.get_event_loop().time()
         if now >= flush_deadline:
             if batch:
-                log.info(f"FLUSHING BATCH INTO PG")
                 await flush_batch(batch, pg_pool)
                 batch.clear()
             flush_deadline = now + interval
         elif len(batch) >= cfg.batch_size:
-            log.info(f"FLUSHING BATCH INTO PG")
             await flush_batch(batch, pg_pool)
             batch.clear()
             flush_deadline = asyncio.get_event_loop().time() + interval
