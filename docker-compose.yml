@@ -1,0 +1,80 @@
+services:
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+
+  ingestion:
+    build: ./ingestion
+    ports:
+      - "8001:8001"
+    depends_on:
+      redis:
+        condition: service_healthy
+    environment:
+      REDIS_URL: redis://redis:6379
+      STREAM_NAME: telemetry:raw
+      STREAM_MAXLEN: "100000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8001/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  simulator:
+    build: ./simulator
+    depends_on:
+      ingestion:
+        condition: service_healthy
+    environment:
+      INGESTION_URL: ws://ingestion:8001/ws/telemetry
+      HZ: "10"
+      RECONNECT_DELAY_S: "2"
+    restart: on-failure
+
+  # --------------------------------------------------------------------------
+  # Teammate scopes — uncomment when their services are ready
+  # --------------------------------------------------------------------------
+
+  # processing:
+  #   build: ./processing_service
+  #   depends_on:
+  #     redis:
+  #       condition: service_healthy
+  #   environment:
+  #     REDIS_URL: redis://redis:6379
+  #     STREAM_NAME: telemetry:raw
+  #     DB_URL: postgresql+asyncpg://user:password@timescaledb:5432/locomotive
+  #   volumes:
+  #     - ./health_config.json:/app/health_config.json
+
+  # query-api:
+  #   build: ./query-api
+  #   ports:
+  #     - "8000:8000"
+  #   depends_on:
+  #     - redis
+  #     - timescaledb
+  #   environment:
+  #     REDIS_URL: redis://redis:6379
+  #     DB_URL: postgresql+asyncpg://user:password@timescaledb:5432/locomotive
+
+  # timescaledb:
+  #   image: timescale/timescaledb:latest-pg15
+  #   environment:
+  #     POSTGRES_DB: locomotive
+  #     POSTGRES_USER: user
+  #     POSTGRES_PASSWORD: password
+  #   ports:
+  #     - "5432:5432"
+  #   volumes:
+  #     - tsdb_data:/var/lib/postgresql/data
+
+# volumes:
+#   tsdb_data:

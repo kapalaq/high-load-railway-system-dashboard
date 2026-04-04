@@ -1,38 +1,96 @@
+import logging
 import os
-import time
-import json
-import random
-import redis
+from contextlib import asynccontextmanager
 
-REDIS_URL = os.environ.get("REDIS_URL", "redis://localhost:6379")
-STREAM_NAME = os.environ.get("STREAM_NAME", "events")
-INTERVAL = float(os.environ.get("INTERVAL", "2"))
+import redis.asyncio as aioredis
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, Request
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel, ValidationError
 
-SENSORS = ["sensor-A", "sensor-B", "sensor-C"]
-EVENT_TYPES = ["temperature", "humidity", "pressure", "voltage"]
+logging.basicConfig(level=logging.INFO, format="%(asctime)s [ingestion] %(message)s")
+logger = logging.getLogger(__name__)
 
-def generate_payload(seq: int) -> dict:
-    return {
-        "seq": seq,
-        "sensor": random.choice(SENSORS),
-        "type": random.choice(EVENT_TYPES),
-        "value": round(random.uniform(0, 100), 3),
-        "unit": random.choice(["°C", "%", "hPa", "V"]),
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-    }
+REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
+STREAM_NAME = os.getenv("STREAM_NAME", "telemetry:raw")
+STREAM_MAXLEN = int(os.getenv("STREAM_MAXLEN", "100000"))
 
-def main():
-    r = redis.from_url(REDIS_URL)
-    print(f"[publisher] connected to {REDIS_URL}, streaming → {STREAM_NAME}")
 
-    seq = 0
-    while True:
-        payload = generate_payload(seq)
-        # XADD stores fields as key-value pairs; we use a single "data" field with JSON
-        msg_id = r.xadd(STREAM_NAME, {"data": json.dumps(payload)})
-        print(f"[publisher] sent id={msg_id.decode()} seq={seq} {payload}")
-        seq += 1
-        time.sleep(INTERVAL)
+class Stop(BaseModel):
+    name: str
+    distance_km: float
+    status: str  # "passed" | "upcoming" | "current"
 
-if __name__ == "__main__":
-    main()
+
+class RouteInfo(BaseModel):
+    route_name: str
+    total_distance_km: float
+    current_position_km: float
+    stops: list[Stop]
+
+
+class Metric(BaseModel):
+    key: str
+    name_ru: str
+    unit: str
+    current_value: float
+
+
+class TelemetryConfig(BaseModel):
+    metrics: list[Metric]
+
+
+class TelemetryMessage(BaseModel):
+    train_id: str
+    locomotive_type: str
+    timestamp: str
+    route_info: RouteInfo
+    telemetry_config: TelemetryConfig
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    app.state.redis = aioredis.from_url(REDIS_URL, encoding="utf-8", decode_responses=False)
+    logger.info("Redis pool created: %s", REDIS_URL)
+    yield
+    await app.state.redis.aclose()
+    logger.info("Redis pool closed")
+
+
+app = FastAPI(title="Ingestion Service", lifespan=lifespan)
+
+
+@app.get("/health")
+async def health(request: Request):
+    try:
+        await request.app.state.redis.ping()
+        return {"status": "ok", "redis": "connected"}
+    except Exception as e:
+        return JSONResponse(status_code=503, content={"status": "error", "redis": str(e)})
+
+
+@app.websocket("/ws/telemetry")
+async def telemetry_ws(websocket: WebSocket):
+    await websocket.accept()
+    redis_client = websocket.app.state.redis
+    client = websocket.client
+    logger.info("Client connected: %s:%s", client.host, client.port)
+
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                TelemetryMessage.model_validate_json(raw)
+            except ValidationError as e:
+                logger.warning("Validation error from %s:%s — %s", client.host, client.port, e)
+                continue  # drop bad message, keep connection alive
+
+            await redis_client.xadd(
+                STREAM_NAME,
+                {"payload": raw.encode()},
+                maxlen=STREAM_MAXLEN,
+                approximate=True,
+            )
+    except WebSocketDisconnect:
+        logger.info("Client disconnected: %s:%s", client.host, client.port)
+    except Exception as e:
+        logger.error("Unexpected error from %s:%s — %s", client.host, client.port, e)
