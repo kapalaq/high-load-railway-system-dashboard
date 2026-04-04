@@ -12,7 +12,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s [simulator] %(messag
 logger = logging.getLogger(__name__)
 
 INGESTION_URL = os.getenv("INGESTION_URL", "ws://localhost:8001/ws/telemetry")
-HZ = float(os.getenv("HZ", "10"))
+HZ = float(os.getenv("HZ", "0.01"))
 RECONNECT_DELAY_S = float(os.getenv("RECONNECT_DELAY_S", "2"))
 
 

@@ -1,37 +1,60 @@
 """
 processing.py — telemetry enrichment and health index computation.
 
-Uses train_data_contained.json for per-loco-type metric definitions.
-Each metric has ranges (normal/warning/critical) and per-severity penalties.
+Loads config.json for per-loco-type metric definitions (ranges, penalties,
+alert messages, recommendations) and global settings (ema_alpha, categories).
 """
 
 from __future__ import annotations
 
 import json
 import os
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 
-_DATA_PATH = Path(os.environ.get("TRAIN_DATA_PATH", Path(__file__).parent / "train_data_contained.json"))
+_CONFIG_PATH = Path(os.environ.get("CONFIG_PATH", Path(__file__).parent / "config.json"))
 
 
-def _load_data() -> dict:
-    with open(_DATA_PATH) as f:
+def _load_config() -> dict:
+    with open(_CONFIG_PATH) as f:
         return json.load(f)
 
 
-_TRAIN_DATA: dict = _load_data()
+_CONFIG: dict = _load_config()
 
-_CATEGORIES = [
-    ("A", 90, 100),
-    ("B", 75, 90),
-    ("C", 50, 75),
-    ("D", 25, 50),
-    ("E",  0, 25),
+_EMA_ALPHA: float = _CONFIG["global"]["ema_alpha"]
+_CATEGORIES: list[tuple[str, float, float]] = [
+    (letter, low, high) for letter, low, high in _CONFIG["categories"]
 ]
-
-_EMA_ALPHA = 0.2
 _ema_state: dict[tuple[str, str], float] = {}
+
+
+# ---------------------------------------------------------------------------
+# Result type
+# ---------------------------------------------------------------------------
+
+@dataclass
+class TelemetryRow:
+    time: datetime
+    loco_id: str
+    health_score: float
+    health_category: str
+    alert_count: int
+    params: dict       # enriched metrics — plain dict, easy to inspect
+    route_info: dict   # raw route_info — plain dict
+
+    def db_tuple(self) -> tuple:
+        """Ready-to-insert tuple for asyncpg executemany."""
+        return (
+            self.time,
+            self.loco_id,
+            self.health_score,
+            self.health_category,
+            self.alert_count,
+            self.params,
+            self.route_info,
+        )
 
 
 # ---------------------------------------------------------------------------
@@ -59,7 +82,7 @@ def _normalize(value: float, min_val: float, max_val: float) -> float:
     return max(0.0, min(1.0, (value - min_val) / span))
 
 
-def classify_alert(value: float, metric_def: dict) -> str:
+def classify_status(value: float, metric_def: dict) -> str:
     """Return 'ok', 'warning', or 'critical' based on defined ranges."""
     ranges = metric_def["ranges"]
     crit = ranges["critical"]
@@ -79,8 +102,8 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
     """
     Return enriched feature dict keyed by metric key.
 
-    Known metrics get alert classification + message.
-    Unknown metrics pass through with alert='ok' and empty strings.
+    Known metrics get status classification + message from config.
+    Unknown metrics pass through with status='ok' and empty strings.
     """
     enriched: dict[str, dict] = {}
 
@@ -91,15 +114,14 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
 
         if key in metrics_definition:
             mdef  = metrics_definition[key]
-            level = classify_alert(value, mdef)
-            label = mdef.get("label", key)
+            level = classify_status(value, mdef)
 
             if level == "critical":
-                alert_msg = f"CRITICAL: {label}"
-                rec       = f"Take immediate action — {label} is in critical range."
+                alert_msg = mdef["critical_message"]
+                rec       = mdef["critical_recommendation"]
             elif level == "warning":
-                alert_msg = f"WARNING: {label}"
-                rec       = f"Monitor closely — {label} is in warning range."
+                alert_msg = mdef["warning_message"]
+                rec       = mdef["warning_recommendation"]
             else:
                 alert_msg = ""
                 rec       = ""
@@ -109,11 +131,11 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
             rec       = ""
 
         enriched[key] = {
-            "value":          value,
-            "unit":           unit,
-            "alert":          level,
-            "alert_message":  alert_msg,
-            "recommendation": rec,
+            "value":           value,
+            "unit":            unit,
+            "status":          level,
+            "alert_message":   alert_msg,
+            "recommendation":  rec,
         }
 
     return enriched
@@ -146,19 +168,19 @@ def compute_health(
         if key not in metrics_definition:
             continue
 
-        mdef            = metrics_definition[key]
+        mdef             = metrics_definition[key]
         min_val, max_val = _metric_bounds(mdef)
-        norm            = _normalize(value, min_val, max_val)
+        norm             = _normalize(value, min_val, max_val)
 
-        ema_key              = (train_id, key)
-        prev                 = _ema_state.get(ema_key, norm)
-        smoothed             = _EMA_ALPHA * norm + (1 - _EMA_ALPHA) * prev
-        _ema_state[ema_key]  = smoothed
+        ema_key             = (train_id, key)
+        prev                = _ema_state.get(ema_key, norm)
+        smoothed            = _EMA_ALPHA * norm + (1 - _EMA_ALPHA) * prev
+        _ema_state[ema_key] = smoothed
 
         smoothed_sum  += smoothed
         total_metrics += 1
 
-        level         = classify_alert(value, mdef)
+        level          = classify_alert(value, mdef)
         total_penalty += mdef["penalties"].get(level, 0)
 
     raw_score = (smoothed_sum / total_metrics * 100) if total_metrics > 0 else 0.0
@@ -177,42 +199,43 @@ def compute_health(
 # Public entry point
 # ---------------------------------------------------------------------------
 
-def process(payload: dict) -> dict:
+def process(payload: dict) -> TelemetryRow:
     """
-    Enrich a raw telemetry payload and return a flat dict for asyncpg INSERT.
+    Enrich a raw telemetry payload and return a TelemetryRow instance.
 
-    Return shape:
-        {
-            "time":             datetime (UTC),
-            "loco_id":          str,
-            "health_score":     float,
-            "health_category":  str,
-            "alert_count":      int,
-            "params":           str   # JSON string for JSONB column
-        }
+    Fields:
+        time             — datetime (UTC)
+        loco_id          — str
+        health_score     — float  0–100
+        health_category  — str    A–E
+        alert_count      — int
+        params           — dict   enriched metrics
+        route_info       — dict   raw route info (empty dict if absent)
     """
     train_id      = payload["train_id"]
-    timestamp_str = payload["timestamp"]          # ISO-8601, e.g. "2026-04-04T12:00:00Z"
-    metrics       = payload["telemetry_config"]["metrics"]  # list[{key, name_ru, unit, current_value}]
+    timestamp_str = payload["timestamp"]
+    metrics       = payload["telemetry_config"]["metrics"]
+    route_info    = payload.get("route_info") or {}
 
     loco_type          = _extract_loco_type(train_id)
-    loco_data          = _TRAIN_DATA.get(loco_type, {})
-    metrics_definition = loco_data.get("metrics_definition", {})
+    loco_data          = _CONFIG["locomotives"].get(loco_type, {})
+    metrics_definition = loco_data.get("metrics", {})
 
     enriched                = enrich_metrics(metrics, metrics_definition)
     health_score, category  = compute_health(train_id, metrics, metrics_definition)
-    alert_count             = sum(1 for f in enriched.values() if f["alert"] != "ok")
+    alert_count             = sum(1 for f in enriched.values() if f["status"] != "ok")
 
     try:
         time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
     except Exception:
         time = datetime.now(tz=timezone.utc)
 
-    return {
-        "time":            time,
-        "loco_id":         train_id,
-        "health_score":    health_score,
-        "health_category": category,
-        "alert_count":     alert_count,
-        "params":          json.dumps(enriched),
-    }
+    return TelemetryRow(
+        time=time,
+        loco_id=train_id,
+        health_score=health_score,
+        health_category=category,
+        alert_count=alert_count,
+        params=enriched,
+        route_info=route_info,
+    )
