@@ -285,7 +285,7 @@ def enrich_route(route_info: dict, speed: float) -> None:
         route_info["current"]["latitude"],
         route_info["current"]["longitude"],
         lat_min, lat_max, lon_min, lon_max,
-    ) if lat_min != lat_max != lon_min != lon_max != 0 else 0
+    ) if lat_min != lat_max and lon_min != lon_max else 0
     time_left_h = round(distance_left_km / speed, 2) if speed > 0 else 0
 
     route_info["info"] = {
