@@ -50,8 +50,8 @@ def _interpolate_coords(position_km: float, stops: list[dict]) -> dict:
 
 
 def _gen_temp_oil(t: float, ph: float) -> float:
-    """Oil temp: normally 55-75°C, occasionally drifts into warning (>80°C)."""
-    return round(_clamp(65 + 15 * math.sin(t / 50 + ph + 0.5) + random.gauss(0, 1.5), 40, 150), 1)
+    """Oil temp: oscillates 55-91°C, regularly drifts into warning (>80°C)."""
+    return round(_clamp(73 + 18 * math.sin(t / 50 + ph + 0.5) + random.gauss(0, 1.5), 40, 150), 1)
 
 
 def _gen_temp_converters(t: float, ph: float) -> float:
@@ -80,8 +80,8 @@ def _gen_pressure_air(t: float, ph: float) -> float:
 
 
 def _gen_tractive_force(t: float, ph: float) -> float:
-    """Tractive force: 150-260 kN normally, max 300."""
-    return round(_clamp(210 + 50 * math.sin(t / 55 + ph) + random.gauss(0, 5), 0, 300), 1)
+    """Tractive force: 155-275 kN, regularly enters high-traction warning (>260 kN)."""
+    return round(_clamp(215 + 60 * math.sin(t / 55 + ph) + random.gauss(0, 5), 0, 300), 1)
 
 
 def _gen_fuel_liters(t: float, ph: float, tank_max: float = 1500) -> float:
@@ -92,9 +92,10 @@ def _gen_fuel_liters(t: float, ph: float, tank_max: float = 1500) -> float:
 
 
 def _gen_energy_usage(t: float, ph: float) -> float:
-    """Cumulative energy consumption for electric loco, resets each 2h cycle."""
+    """Cumulative energy consumption for electric loco, resets each 2h cycle.
+    Reaches ~1400 kWh by end of cycle → last third sits in 'elevated' warning (1201-1400)."""
     drain_cycle = 7200
-    consumed = (t % drain_cycle) / drain_cycle * 1300 + random.gauss(0, 5)
+    consumed = (t % drain_cycle) / drain_cycle * 1400 + random.gauss(0, 5)
     return round(_clamp(consumed, 0, 1500), 1)
 
 
@@ -119,7 +120,7 @@ def _gen_brake_force(t: float, ph: float) -> float:
 
 def _build_metrics_kz8a(t: float, ph: float) -> list[dict]:
     speed = round(_clamp(80 + 25 * math.sin(t / 60 + ph) + random.gauss(0, 1.5), 0, 200), 2)
-    motor_temp = round(_clamp(75 + 15 * math.sin(t / 45 + ph + 1.0) + random.gauss(0, 2), 0, 200), 1)
+    motor_temp = round(_clamp(82 + 18 * math.sin(t / 45 + ph + 1.0) + random.gauss(0, 2), 0, 200), 1)
     pantograph_v = round(_clamp(25.0 + random.gauss(0, 0.3), 0, 35), 2)
     pressure_oil = round(_clamp(4.5 + 1.0 * math.sin(t / 60 + ph + 0.3) + random.gauss(0, 0.15), 0, 10), 2)
 
@@ -143,7 +144,7 @@ def _build_metrics_kz8a(t: float, ph: float) -> list[dict]:
 
 def _build_metrics_te33a(t: float, ph: float) -> list[dict]:
     speed = round(_clamp(60 + 20 * math.sin(t / 70 + ph) + random.gauss(0, 1.5), 0, 200), 2)
-    motor_temp = round(_clamp(75 + 12 * math.sin(t / 55 + ph + 1.0) + random.gauss(0, 2), 0, 200), 1)
+    motor_temp = round(_clamp(82 + 18 * math.sin(t / 55 + ph + 1.0) + random.gauss(0, 2), 0, 200), 1)
     pressure_oil = round(_clamp(5.0 + 1.2 * math.sin(t / 50 + ph) + random.gauss(0, 0.2), 0, 10), 2)
 
     return [

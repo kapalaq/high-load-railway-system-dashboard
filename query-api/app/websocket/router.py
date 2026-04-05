@@ -26,20 +26,20 @@ def _decode_token(token: str):
 @ws_router.websocket("/ws")
 async def websocket_endpoint(
     websocket: WebSocket,
-    token: str = Query(..., description="JWT access token"),
+    # token: str = Query(..., description="JWT access token"),
     train_id: str = Query(..., description="Train ID to subscribe to"),
 ):
     await websocket.accept()
 
-    try:
-        user_id, role = _decode_token(token)
-    except ValueError as e:
-        await websocket.close(code=4001, reason=str(e))
-        return
+    # try:
+    #     user_id, role = _decode_token(token)
+    # except ValueError as e:
+    #     await websocket.close(code=4001, reason=str(e))
+    #     return
 
     manager: ConnectionManager = websocket.app.state.manager
     await manager.subscribe(train_id, websocket)
-    logger.info("WS connected: user_id=%s train_id=%s", user_id, train_id)
+    logger.info("WS connected: train_id=%s",  train_id)
 
     try:
         while True:
@@ -48,4 +48,4 @@ async def websocket_endpoint(
         pass
     finally:
         await manager.unsubscribe(train_id, websocket)
-        logger.info("WS disconnected: user_id=%s train_id=%s", user_id, train_id)
+        logger.info("WS disconnected: train_id=%s",  train_id)

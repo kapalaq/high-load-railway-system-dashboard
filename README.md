@@ -7,15 +7,15 @@
 ## Архитектура
 
 ```
-[10 симуляторов] --WebSocket--> [Ingestion Service]
+[Simulator] --WebSocket--> [Ingestion Service]
                                         |
                                         v
                                  [Redis Streams]          ← буфер + воспроизведение
                                         |
                                         v
-                               [Processing Service]       ← индекс состояния, EMA
+                               [Processing Service]       ← индекс здоровья и тд.
                                   /            \
-                        (немедленно)             (асинхронно)
+                        (напрямую)             (асинхронно)
                                /                  \
                       [Redis Pub/Sub]          [TimescaleDB]
                       metrics:live                  |
@@ -37,7 +37,7 @@
 | `ingestion` | `./ingestion` | 8001 | Приём WebSocket → запись в Redis Streams |
 | `processing` | `./processing_service` | — | Вычисление индекса состояния, запись в TimescaleDB |
 | `query-api` | `./query-api` | 8000 | REST API + WebSocket Hub для фронтенда |
-| `simulator` | `./simulator` | — | Генерация симулированной телеметрии (10 локомотивов) |
+| `simulator` | `./simulator` | — | Генерация симулированной телеметрии |
 | `pgadmin` | — | 5050 | Веб-интерфейс для управления базами данных |
 
 ---
@@ -101,7 +101,7 @@ curl http://localhost:8000/docs      # OpenAPI-документация query-ap
 |---|---|---|
 | `INGESTION_URL` | `ws://ingestion:8001/ws/telemetry` | WebSocket ingestion |
 | `QUERY_API_WS_URL` | `ws://query-api:8000/api/websocket/ws` | WebSocket query-api (мониторинг RTT) |
-| `HZ` | `10` | Частота отправки телеметрии (событий/сек на локомотив) |
+| `HZ` | `1` | Частота отправки телеметрии (событий/сек на локомотив) |
 | `RECONNECT_DELAY_S` | `2` | Задержка переподключения (секунды) |
 
 ---
@@ -152,7 +152,7 @@ username=driver1&password=secret
 ws://localhost:8000/api/websocket/ws?token=<jwt>&train_id=<train_id>
 ```
 
-После подключения сервер непрерывно отправляет обработанные снимки телеметрии по указанному `train_id`. Широковещательная рассылка происходит при каждом новом цикле обработки.
+После подключения сервер непрерывно отправляет обработанные снимки телеметрии по указанному `train_id`. Рассылка происходит при каждом новом цикле обработки.
 
 **Пример получаемого сообщения:**
 ```json
@@ -160,20 +160,20 @@ ws://localhost:8000/api/websocket/ws?token=<jwt>&train_id=<train_id>
   "train_id": "KZ8A-L001",
   "timestamp": "2026-04-05T10:23:45.123Z",
   "health_score": 82.4,
-  "health_category": "Normal",
+  "health_category": "Норм",
   "alert_count": 0,
   "params": {
-    "speed":      { "raw": 95.2, "unit": "км/ч", "status": "normal" },
-    "temp_motor": { "raw": 78.1, "unit": "°C",   "status": "normal" }
+    "speed":      { "raw": 95.2, "unit": "км/ч", "status": "норм" },
+    "temp_motor": { "raw": 78.1, "unit": "°C",   "status": "норм" }
   },
   "route_info": {
-    "route_name": "Astana - Karaganda - Almaty",
+    "route_name": "Астана - Караганда - Алматы",
     "total_distance_km": 1211,
     "current_position_km": 340.5,
     "stops": [
-      { "name": "Astana",    "distance_km": 0,    "status": "passed" },
-      { "name": "Karaganda", "distance_km": 211,  "status": "passed" },
-      { "name": "Almaty",    "distance_km": 1211, "status": "upcoming" }
+      { "name": "Астана",    "distance_km": 0,    "status": "пройдено" },
+      { "name": "Караганда", "distance_km": 211,  "status": "пройдено" },
+      { "name": "Алматы",    "distance_km": 1211, "status": "впереди" }
     ]
   }
 }
@@ -204,22 +204,22 @@ Authorization: Bearer <jwt>
 
 Симулятор генерирует данные для 10 локомотивов на двух маршрутах.
 
-| Train ID | Тип | Модель | Маршрут |
-|---|---|---|---|
-| KZ8A-L001 | Электровоз | KZ8A (Alstom/EKZ) | Astana → Karaganda → Almaty |
-| KZ8A-L002 | Электровоз | KZ8A | Astana → Karaganda → Almaty |
-| KZ8A-L003 | Электровоз | KZ8A | Almaty → Karaganda → Astana |
-| KZ8A-L004 | Электровоз | KZ8A | Astana → Karaganda → Almaty |
-| KZ8A-L005 | Электровоз | KZ8A | Almaty → Karaganda → Astana |
-| TE33A-L006 | Тепловоз | TE33A (GE/Kurastyru) | Astana → Karaganda → Almaty |
-| TE33A-L007 | Тепловоз | TE33A | Almaty → Karaganda → Astana |
-| TE33A-L008 | Тепловоз | TE33A | Astana → Karaganda → Almaty |
-| TE33A-L009 | Тепловоз | TE33A | Almaty → Karaganda → Astana |
-| TE33A-L010 | Тепловоз | TE33A | Astana → Karaganda → Almaty |
+| Train ID | Тип | Модель | Маршрут                 |
+|---|---|---|-------------------------|
+| KZ8A-L001 | Электровоз | KZ8A | Астана → Караганда → Алматы |
+| KZ8A-L002 | Электровоз | KZ8A | Астана → Караганда → Алматы |
+| KZ8A-L003 | Электровоз | KZ8A | Алматы → Караганда → Астана |
+| KZ8A-L004 | Электровоз | KZ8A | Астана → Караганда → Алматы |
+| KZ8A-L005 | Электровоз | KZ8A | Алматы → Караганда → Астанаa |
+| TE33A-L006 | Тепловоз | TE33A (GE/Kurastyru) | Астана → Караганда → Алматы |
+| TE33A-L007 | Тепловоз | TE33A | Алматы → Караганда → Астана |
+| TE33A-L008 | Тепловоз | TE33A | Астана → Караганда → Алматы |
+| TE33A-L009 | Тепловоз | TE33A | Алматы → Караганда → Астана |
+| TE33A-L010 | Тепловоз | TE33A | Астана → Караганда → Алматы |
 
 ---
 
-## Индекс технического состояния
+## Индекс технического состояния (здоровья)
 
 Вычисляется в `processing_service/processing.py` для каждого сообщения телеметрии.
 
@@ -233,11 +233,10 @@ Authorization: Bearer <jwt>
 ### Категории
 
 | Категория | Диапазон оценки |
-|---|---|
-| Normal | 75 – 100 |
-| Warning | 40 – 75 |
-| Critical | 1 – 40 |
-| RUN | 0 – 1 |
+|-----------|---|
+| Норма     | 75 – 100 |
+| Warning   | 40 – 75 |
+| Critical  | 1 – 40 |
 
 ### Отслеживаемые параметры
 
@@ -252,15 +251,15 @@ Authorization: Bearer <jwt>
 ### TimescaleDB — база данных `locomotive`
 
 ```sql
-CREATE TABLE telemetry (
+CREATE TABLE IF NOT EXISTS telemetry (
     time             TIMESTAMPTZ      NOT NULL,
     train_id         TEXT             NOT NULL,
     health_score     DOUBLE PRECISION,
-    health_category  TEXT,
+    health_category  CHAR(255),
     alert_count      INTEGER,
-    params           JSONB,           -- обогащённая карта параметров
-    route_info       JSONB            -- текущая позиция и остановки
-);
+    params           JSONB,
+    route_info       JSONB
+)
 
 -- Гипертаблица с разбивкой по времени (интервал 1 час)
 SELECT create_hypertable('telemetry', 'time', chunk_time_interval => INTERVAL '1 hour');
@@ -359,7 +358,6 @@ python processing_service/test.py
 ```
 /
 ├── docker-compose.yml
-├── ARCHITECTURE.md
 │
 ├── ingestion/
 │   ├── Dockerfile

@@ -1,6 +1,6 @@
 {
   "global": {
-    "ema_alpha": 0.2
+    "ema_alpha": 0.4
   },
   "categories": [
     ["Норма", 75, 100],
