@@ -331,9 +331,9 @@ def compute_health(
 
         total_penalty += penalty
         if penalty > 0:
-            per_metric.append((key, severity, penalty, max_pen))
+            per_metric.append((m["name_ru"], severity, penalty, max_pen))
     
-    if len(per_metric) == 0:
+    if len(per_metric) < 5:
         fallback = []
         for m in metrics:
             key = m["key"]
@@ -342,8 +342,11 @@ def compute_health(
             penalties = metrics_definition[key].get("penalties", {})
             max_pen = max(penalties.values()) if penalties else 0.0
             if max_pen > 0:
-                fallback.append((key, "normal", max_pen, 100))
-        per_metric = sorted(fallback, key=lambda x: x[2], reverse=True)[:5]
+                fallback.append((m["name_ru"], "normal", max_pen, 100))
+    
+    fallback = sorted(fallback, key=lambda x: x[2], reverse=True)[:5]
+    for i in range(5 - len(per_metric)):
+        per_metric.append(fallback[i])
 
     raw_score = max(0.0, 100.0 - total_penalty)
 
