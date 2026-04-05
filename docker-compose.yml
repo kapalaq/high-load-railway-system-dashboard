@@ -63,7 +63,7 @@ services:
       INGESTION_URL: ws://ingestion:8001/ws/telemetry
       QUERY_API_WS_URL: ws://query-api:8000/api/websocket/ws
       SIM_MODE: "dev"
-      HZ: "0.2"
+      HZ: "0.7"
       RECONNECT_DELAY_S: "2"
     networks:
       - default
