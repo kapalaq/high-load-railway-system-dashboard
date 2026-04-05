@@ -5,6 +5,113 @@ import time
 from config import ROUTES
 
 
+# ---------------------------------------------------------------------------
+# Fault injection
+# Each train gets independent fault state with up to 3 simultaneous faults.
+# A "critical incident" (3 faults at once) fires periodically to push the
+# health score below 40 ("Критично"). Each fault lasts 30-90s.
+# ---------------------------------------------------------------------------
+
+# (metric_key, lo, hi, severity_label)
+# "critical" entries must land in the config's critical range.
+_FAULT_TARGETS: dict[str, list[tuple]] = {
+    "KZ8A": [
+        ("temp_motor",         103.0, 118.0, "critical"),   # overheated:    >101°C,  penalty 25
+        ("temp_oil",            96.0, 130.0, "critical"),   # overheated:    >96°C,   penalty 20
+        ("pantograph_voltage",  14.0,  17.9, "critical"),   # critical_low:  <18kV,   penalty 22
+        ("pressure_main_tank",   1.0,   4.4, "critical"),   # critical_low:  <4.4bar, penalty 30
+        ("current_ampere",    2501.0, 2900.0, "critical"),  # critical:      >2500A,  penalty 25
+        ("energy_usage",      1401.0, 1490.0, "critical"),  # critical:      >1400kWh,penalty 15
+        ("temp_oil",            83.0,  95.0, "warning"),    # elevated
+        ("current_ampere",    2050.0, 2490.0, "warning"),   # high
+    ],
+    "TE33A": [
+        ("temp_motor",         103.0, 118.0, "critical"),
+        ("temp_oil",            96.0, 130.0, "critical"),
+        ("pressure_main_tank",   1.0,   4.4, "critical"),
+        ("current_ampere",    1801.0, 1980.0, "critical"),  # critical: >1800A, penalty 25
+        ("fuel_liters",          0.0,   99.0, "critical"),  # critical: <100L,  penalty 30
+        ("temp_oil",            83.0,  95.0, "warning"),
+        ("fuel_liters",        100.0,  290.0, "warning"),
+    ],
+}
+
+# Preset "critical incident" combos: 3 faults that together push total penalty > 60.
+# Each entry is a list of (key, lo, hi) tuples.
+_CRITICAL_INCIDENTS: dict[str, list[list[tuple]]] = {
+    "KZ8A": [
+        [  # Overheating + pressure loss + electrical fault
+            ("temp_motor",         105.0, 115.0),
+            ("pressure_main_tank",   1.5,   4.0),
+            ("current_ampere",    2550.0, 2800.0),
+        ],
+        [  # Oil overheat + pantograph + energy spike
+            ("temp_oil",            97.0, 125.0),
+            ("pantograph_voltage",  14.0,  17.5),
+            ("energy_usage",      1410.0, 1490.0),
+        ],
+    ],
+    "TE33A": [
+        [
+            ("temp_motor",         105.0, 115.0),
+            ("pressure_main_tank",   1.5,   4.0),
+            ("current_ampere",    1820.0, 1970.0),
+        ],
+        [
+            ("temp_oil",            97.0, 125.0),
+            ("fuel_liters",          5.0,  80.0),
+            ("pressure_main_tank",   1.5,   3.5),
+        ],
+    ],
+}
+
+# Per-train state: list of active fault slots + next incident schedule
+# Each slot: {"key": str | None, "value": float, "until": float}
+_fault_state: dict[str, dict] = {}
+
+
+def _get_fault_state(train_id: str) -> dict:
+    if train_id not in _fault_state:
+        _fault_state[train_id] = {
+            "slots": [],                                          # active faults
+            "next_incident_at": time.time() + random.uniform(5.0, 15.0),  # first incident fast
+        }
+    return _fault_state[train_id]
+
+
+def _apply_faults(train_id: str, loco_type: str, metrics: list[dict]) -> list[dict]:
+    """Fire a new incident if due, keep active faults, override metric values."""
+    now = time.time()
+    state = _get_fault_state(train_id)
+
+    # Expire finished faults
+    state["slots"] = [s for s in state["slots"] if now < s["until"]]
+
+    # Fire a new incident if it's time and no faults are currently active
+    if now >= state["next_incident_at"] and not state["slots"]:
+        incidents = _CRITICAL_INCIDENTS.get(loco_type, [])
+        if incidents:
+            chosen = random.choice(incidents)
+            duration = random.uniform(30.0, 60.0)
+            for key, lo, hi in chosen:
+                state["slots"].append({
+                    "key":   key,
+                    "value": round(random.uniform(lo, hi), 2),
+                    "until": now + duration,
+                })
+        # Schedule next incident: 60-120s after this one ends
+        state["next_incident_at"] = now + duration + random.uniform(60.0, 120.0)
+
+    # Apply overrides
+    overrides = {s["key"]: s["value"] for s in state["slots"]}
+    for m in metrics:
+        if m["key"] in overrides:
+            base = overrides[m["key"]]
+            m["current_value"] = round(base + random.gauss(0, base * 0.01), 2)
+
+    return metrics
+
+
 def _iso_now() -> str:
     return time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())
 
@@ -174,6 +281,8 @@ def generate_telemetry(loco: dict, t: float) -> dict:
         metrics = _build_metrics_kz8a(t, ph)
     else:
         metrics = _build_metrics_te33a(t, ph)
+
+    metrics = _apply_faults(loco["train_id"], loco["loco_type"], metrics)
 
     stops = route["stops"]
     return {

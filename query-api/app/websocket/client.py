@@ -2,10 +2,10 @@
 Railway Dashboard WebSocket client.
 
 Usage:
-    python ws_client.py --token <JWT> [--url ws://localhost:8000/api/websocket/ws]
+    python client.py --train-id KZ8A-L001 [--url ws://localhost:8000/api/websocket/ws]
 
-Prompts for train codes in a loop and prints server responses.
-Type 'quit' or press Ctrl+C to exit.
+Subscribes to live updates for the given train and prints server responses.
+Press Ctrl+C to exit.
 """
 
 import argparse
@@ -67,31 +67,19 @@ async def _listen(ws: "websockets.ClientConnection", stop: asyncio.Event) -> Non
         print(f"\n[connection closed with error: {e}]")
 
 
-async def run(url: str, token: str) -> None:
-    full_url = f"{url}?token={token}"
-    print(f"Connecting to {url} …")
+async def run(url: str, train_id: str) -> None:
+    full_url = f"{url}?train_id={train_id}"
+    print(f"Connecting to {url} for train {train_id} …")
 
     try:
         async with websockets.connect(full_url) as ws:
-            print("Connected. Type a train code and press Enter. ('quit' to exit)\n")
+            print("Connected. Listening for updates. (Ctrl+C to exit)\n")
 
             stop = asyncio.Event()
             listener = asyncio.create_task(_listen(ws, stop))
 
-            loop = asyncio.get_running_loop()
-
             try:
-                while True:
-                    # Read input without blocking the event loop
-                    code = await loop.run_in_executor(None, lambda: input("Code> ").strip())
-
-                    if code.lower() in {"quit", "exit", "q"}:
-                        break
-
-                    if not code:
-                        continue
-
-                    await ws.send(code)
+                await listener
 
             except (EOFError, KeyboardInterrupt):
                 print("\nInterrupted.")
@@ -122,11 +110,11 @@ async def run(url: str, token: str) -> None:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Railway Dashboard WS client")
-    parser.add_argument("--token", required=True, help="JWT access token")
+    parser.add_argument("--train-id", required=True, help="Train ID to subscribe to")
     parser.add_argument("--url", default=DEFAULT_URL, help=f"WebSocket URL (default: {DEFAULT_URL})")
     args = parser.parse_args()
 
-    asyncio.run(run(args.url, args.token))
+    asyncio.run(run(args.url, args.train_id))
 
 
 if __name__ == "__main__":
