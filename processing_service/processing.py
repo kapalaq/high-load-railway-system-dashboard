@@ -249,13 +249,13 @@ def _route_terrain_status(current: dict, stops: list[dict], position_km: float) 
         if stop.get("status") in ("текущая", "впереди"):
             dist_km = abs(position_km - stop["distance_km"])
             if dist_km <= _STOP_CRITICAL_KM:
-                return (
+                return (0, 0, 0, 0,
                     "Заезд на станцию",
                     "критично",
                     f"Снизьте скорость до 40 км/ч",
                 )
             if dist_km <= _STOP_WARNING_KM:
-                return (
+                return (0, 0, 0, 0,
                     "Подъезд к станции",
                     "предупреждение",
                     f"Cнизьте скорость до 80 км/ч",
