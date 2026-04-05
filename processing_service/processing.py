@@ -343,10 +343,10 @@ def compute_health(
             max_pen = max(penalties.values()) if penalties else 0.0
             if max_pen > 0:
                 fallback.append((m["name_ru"], "normal", max_pen, 100))
-    
-    fallback = sorted(fallback, key=lambda x: x[2], reverse=True)[:5]
-    for i in range(5 - len(per_metric)):
-        per_metric.append(fallback[i])
+        fallback = sorted(fallback, key=lambda x: x[2], reverse=True)[:5]
+        for i in range(5 - len(per_metric)):
+            if i < len(fallback):
+                per_metric.append(fallback[i])
 
     raw_score = max(0.0, 100.0 - total_penalty)
 

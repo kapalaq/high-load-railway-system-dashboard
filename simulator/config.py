@@ -56,3 +56,9 @@ LOCOS_HIGHLOAD = [
 
 SIM_MODE = os.getenv("SIM_MODE", "dev")
 LOCOS = LOCOS_DEV if SIM_MODE == "dev" else LOCOS_HIGHLOAD
+
+# --- Offline buffer ---
+OFFLINE_HZ  = float(os.getenv("OFFLINE_HZ",  "1"))
+BUFFER_CAP  = int(os.getenv("BUFFER_CAP",    "1800"))
+BUFFER_DIR  = os.getenv("BUFFER_DIR",         "/tmp/loco_buffers")
+REPLAY_HZ   = float(os.getenv("REPLAY_HZ",   "1"))

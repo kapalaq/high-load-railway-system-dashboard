@@ -1,13 +1,19 @@
 import asyncio
+import collections
 import json
 import logging
+import os
 import time
 import urllib.error
 import urllib.request
+from pathlib import Path
 
 import websockets
 
-from config import INGESTION_URL, HZ, RECONNECT_DELAY_S, LOCOS, QUERY_API_WS_URL, QUERY_API_TOKEN
+from config import (
+    INGESTION_URL, HZ, RECONNECT_DELAY_S, LOCOS, QUERY_API_WS_URL, QUERY_API_TOKEN,
+    OFFLINE_HZ, BUFFER_CAP, BUFFER_DIR, REPLAY_HZ,
+)
 from generators import generate_telemetry
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [simulator] %(message)s")
@@ -161,28 +167,129 @@ def _fetch_http_record_sync(train_id: str, position_km: float) -> dict | None:
 
 # ── coroutines ────────────────────────────────────────────────────────────────
 
+class OfflineBuffer:
+    """
+    Ring-buffered JSONL file for one locomotive.
+
+    Buffers telemetry payloads to disk when the simulator is offline.
+    Hydrates from disk on startup so data survives process crashes.
+    iter_and_drain() removes each entry only after the caller resumes
+    (i.e. after a successful ws.send), so replay interruptions leave
+    the remaining tail intact for the next reconnect.
+    """
+
+    def __init__(self, train_id: str, cap: int, buf_dir: str) -> None:
+        self._path = Path(buf_dir) / f"{train_id}.jsonl"
+        Path(buf_dir).mkdir(parents=True, exist_ok=True)
+        self._ring: collections.deque = collections.deque(maxlen=cap)
+        if self._path.exists():
+            with self._path.open() as fh:
+                for line in fh:
+                    line = line.strip()
+                    if line:
+                        try:
+                            self._ring.append(json.loads(line))
+                        except json.JSONDecodeError:
+                            pass
+            logger.info("[%s] loaded %d buffered entries from disk", train_id, len(self._ring))
+
+    def push(self, payload: dict) -> None:
+        self._ring.append(payload)
+        self._flush_to_disk()
+
+    def __len__(self) -> int:
+        return len(self._ring)
+
+    def is_empty(self) -> bool:
+        return not self._ring
+
+    def _flush_to_disk(self) -> None:
+        tmp = self._path.with_suffix(".tmp")
+        with tmp.open("w") as fh:
+            for entry in self._ring:
+                fh.write(json.dumps(entry) + "\n")
+        os.replace(tmp, self._path)  # atomic rename on POSIX
+
+    def iter_and_drain(self):
+        """
+        Generator: yields each buffered entry as a raw JSON string.
+        Pops the entry from the ring only after the caller resumes the
+        generator (i.e. after successful ws.send). If the generator is
+        abandoned mid-way, remaining entries stay in the ring.
+        Deletes the disk file when fully drained.
+        """
+        while self._ring:
+            yield json.dumps(self._ring[0])
+            self._ring.popleft()
+        self._path.unlink(missing_ok=True)
+
+
+async def replay_buffer_in_background(train_id: str, buffer: OfflineBuffer) -> None:
+    """
+    Opens a dedicated WebSocket connection to ingestion and slowly drains
+    the offline buffer at REPLAY_HZ. Runs concurrently with the live data
+    task — has zero impact on live telemetry throughput.
+    If the connection drops mid-replay, remaining entries stay in the buffer
+    and will be retried on the next reconnect cycle.
+    """
+    replay_sleep = 1.0 / REPLAY_HZ
+    count = len(buffer)
+    logger.info("[%s] background replay starting: %d entries at %.0f Hz", train_id, count, REPLAY_HZ)
+    try:
+        async with websockets.connect(INGESTION_URL) as ws:
+            for line in buffer.iter_and_drain():
+                # Tag as replay so processing service skips Pub/Sub (frontend won't see it)
+                payload = json.loads(line)
+                payload["_replay"] = True
+                await ws.send(json.dumps(payload))
+                await asyncio.sleep(replay_sleep)
+        logger.info("[%s] background replay complete", train_id)
+    except Exception as e:
+        logger.warning(
+            "[%s] background replay interrupted (%s) — will retry on next reconnect", train_id, e
+        )
+
+
 async def run_loco(loco: dict) -> None:
-    train_id = loco["train_id"]
-    sleep_s = 1.0 / HZ
+    train_id      = loco["train_id"]
+    live_sleep    = 1.0 / HZ
+    offline_sleep = 1.0 / OFFLINE_HZ
+
+    buffer = OfflineBuffer(train_id, cap=BUFFER_CAP, buf_dir=BUFFER_DIR)
 
     while True:
+        # ── CONNECT ──────────────────────────────────────────────────────
         try:
             async with websockets.connect(INGESTION_URL) as ws:
                 logger.info("[%s] connected to %s", train_id, INGESTION_URL)
+
+                # Kick off background replay on a separate connection (non-blocking)
+                if not buffer.is_empty():
+                    asyncio.create_task(replay_buffer_in_background(train_id, buffer))
+
+                # Live telemetry starts immediately — unaffected by replay
                 while True:
-                    deadline = time.monotonic() + sleep_s
+                    deadline = time.monotonic() + live_sleep
                     payload = generate_telemetry(loco, time.time())
                     _last_send[train_id] = time.monotonic()
                     await ws.send(json.dumps(payload))
                     remaining = deadline - time.monotonic()
                     if remaining > 0:
                         await asyncio.sleep(remaining)
+
         except (websockets.ConnectionClosed, websockets.InvalidHandshake, OSError) as e:
-            logger.warning("[%s] disconnected (%s), retrying in %.1fs", train_id, e, RECONNECT_DELAY_S)
-            await asyncio.sleep(RECONNECT_DELAY_S)
+            logger.warning("[%s] disconnected (%s) — buffering at %.0f Hz", train_id, e, OFFLINE_HZ)
         except Exception as e:
-            logger.error("[%s] unexpected error: %s, retrying in %.1fs", train_id, e, RECONNECT_DELAY_S)
-            await asyncio.sleep(RECONNECT_DELAY_S)
+            logger.error("[%s] unexpected error: %s — buffering at %.0f Hz", train_id, e, OFFLINE_HZ)
+
+        # ── OFFLINE: sample at reduced rate until reconnect window expires ──
+        deadline = time.monotonic() + RECONNECT_DELAY_S
+        while time.monotonic() < deadline:
+            payload = generate_telemetry(loco, time.time())
+            buffer.push(payload)
+            await asyncio.sleep(offline_sleep)
+
+        logger.info("[%s] buffer size=%d, retrying connection", train_id, len(buffer))
 
 
 async def run_rtt_monitor(loco: dict) -> None:

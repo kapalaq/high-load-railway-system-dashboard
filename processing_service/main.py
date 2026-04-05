@@ -99,19 +99,21 @@ async def ingest_loop(r: aio_redis.Redis, queue: asyncio.Queue) -> None:
             for msg_id, fields in messages:
                 try:
                     payload = json.loads(fields.get("payload", "{}"))
+                    is_replay = payload.pop("_replay", False)
                     row     = process(payload)
 
-                    # Publish summary immediately — don't block on DB
-                    await r.publish(PUBSUB_CHANNEL, json.dumps({
-                        "train_id":        row.train_id,
-                        "health_score":    row.health_score,
-                        "health_category": row.health_category,
-                        "alert_count":     row.alert_count,
-                        "top_impacts":     row.top_impacts,
-                        "route_info":      row.route_info,
-                        "params":          row.params,
-                        "time":            row.time.isoformat(),
-                    }))
+                    # Skip Pub/Sub for replayed messages — they go to TimescaleDB only
+                    if not is_replay:
+                        await r.publish(PUBSUB_CHANNEL, json.dumps({
+                            "train_id":        row.train_id,
+                            "health_score":    row.health_score,
+                            "health_category": row.health_category,
+                            "alert_count":     row.alert_count,
+                            "top_impacts":     row.top_impacts,
+                            "route_info":      row.route_info,
+                            "params":          row.params,
+                            "time":            row.time.isoformat(),
+                        }))
 
                     # Hand off to DB worker — non-blocking
                     try:
@@ -126,7 +128,7 @@ async def ingest_loop(r: aio_redis.Redis, queue: asyncio.Queue) -> None:
 
         for msg_id in ack_ids:
             await r.xack(STREAM_NAME, GROUP_NAME, msg_id)
-        log.info(f"{len(ack_ids)} message(s) published to Redis Pub/Sub.")
+        log.info(f"{len(ack_ids)} message(s) processed and acked.")
 
 
 async def main() -> None:
