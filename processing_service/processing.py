@@ -35,6 +35,16 @@ _SEVERITY_RU: dict[str, str] = {
     "critical": "критично",
 }
 
+# Metrics included in the "Состояние Узлов" aggregate: key → Russian display name
+_NODE_STATUS_KEYS: dict[str, str] = {
+    "pressure_brake":     "Давление тормозной магистрали",
+    "tractive_force":     "Тяговое усилие",
+    "temp_oil":           "Температура масла",
+    "temp_motor":         "Температура двигатель",
+    "temp_air":           "Температура воздуха",
+    "pressure_main_tank": "Давление главного резервуара",
+}
+
 
 @dataclass
 class TelemetryRow:
@@ -133,6 +143,7 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
 
         if key in metrics_definition:
             mdef             = metrics_definition[key]
+            name             = mdef.get("label", m.get("name_ru", key))
             range_key, severity = classify_status(value, mdef)
             min_val, max_val = _metric_bounds(mdef)
             norm_min, norm_max = _normal_bounds(mdef)
@@ -153,6 +164,7 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
                 rec         = range_def.get("recommendation", "")
                 range_label = range_def.get("label", _SEVERITY_RU.get(range_key, range_key))
         else:
+            name        = m.get("name_ru", key)
             range_key   = "normal"
             severity    = "normal"
             range_label = _SEVERITY_RU["normal"]
@@ -164,6 +176,7 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
             norm_max    = 0.0
 
         enriched[key] = {
+            "name":           name,
             "value":          value,
             "unit":           unit,
             "status":         _SEVERITY_RU.get(severity, severity),
@@ -178,6 +191,110 @@ def enrich_metrics(metrics: list[dict], metrics_definition: dict) -> dict[str, d
         }
 
     return enriched
+
+
+# Each entry: (lat_min, lat_max, lon_min, lon_max, status, recommendation)
+_TERRAIN_ZONES: list[tuple[float, float, float, float, str, str]] = [
+    # Горные участки вблизи Алматы (хребты Заилийского Алатау)
+    (43.0, 44.2, 75.5, 78.0, "критично",
+     "Горный участок", "немедленно снизьте скорость до 60 км/ч"),
+    # Предгорная зона между Алматы и Балхашем
+    (44.2, 46.0, 74.0, 78.0, "предупреждение",
+     "Предгорный участок", "снизьте скорость"),
+    # Промышленная зона Карагандинского угольного бассейна
+    (49.5, 50.2, 72.5, 73.8, "предупреждение",
+     "Промышленная зона", "соблюдайте осторожность"),
+    # Степной участок с высоким ветром (открытая равнина севернее Астаны)
+    (51.5, 53.0, 70.0, 73.0, "предупреждение",
+     "Открытая степь", "возможен сильный боковой ветер"),
+]
+
+_STOP_WARNING_KM  = 30   # предупреждение при приближении к станции
+_STOP_CRITICAL_KM = 10   # критично при подъезде к станции
+
+
+import math
+
+
+def point_to_rectangle_distance(
+    point_lat: float,
+    point_lon: float,
+    rect_min_lat: float,
+    rect_min_lon: float,
+    rect_max_lat: float,
+    rect_max_lon: float,
+) -> float:
+    """
+    Returns the shortest distance in kilometres from a point to a rectangle.
+    Returns 0.0 if the point is inside the rectangle.
+    """
+    # Clamp point to nearest location on/inside the rectangle
+    nearest_lat = max(rect_min_lat, min(rect_max_lat, point_lat))
+    nearest_lon = max(rect_min_lon, min(rect_max_lon, point_lon))
+
+    # Haversine distance from point to nearest rectangle point
+    R = 6371.0
+    lat1, lon1, lat2, lon2 = map(math.radians, [point_lat, point_lon, nearest_lat, nearest_lon])
+    a = math.sin((lat2 - lat1) / 2) ** 2 + math.cos(lat1) * math.cos(lat2) * math.sin((lon2 - lon1) / 2) ** 2
+    return R * 2 * math.asin(math.sqrt(a))
+
+
+def _route_terrain_status(current: dict, stops: list[dict], position_km: float) -> tuple[str, str]:
+    """Return (status, recommendation) based on proximity to stops and terrain zones."""
+    lat = current.get("latitude",  0.0)
+    lon = current.get("longitude", 0.0)
+
+    # 1. Proximity to upcoming/current stops (highest priority)
+    for stop in stops:
+        if stop.get("status") in ("текущая", "впереди"):
+            dist_km = abs(position_km - stop["distance_km"])
+            if dist_km <= _STOP_CRITICAL_KM:
+                return (
+                    "Заезд на станцию",
+                    "критично",
+                    f"Снизьте скорость до 40 км/ч",
+                )
+            if dist_km <= _STOP_WARNING_KM:
+                return (
+                    "Подъезд к станции",
+                    "предупреждение",
+                    f"Cнизьте скорость до 80 км/ч",
+                )
+
+    # 2. Terrain zone check
+    for lat_min, lat_max, lon_min, lon_max, status, name, rec in _TERRAIN_ZONES:
+        if lat_min <= lat <= lat_max and lon_min <= lon <= lon_max:
+            return lat_min, lat_max, lon_min, lon_max, name, status, rec
+
+    return 0, 0, 0, 0, "Обычная ситуация", "норма", "Нет сообщений"
+
+
+def enrich_route(route_info: dict, speed: float) -> None:
+    """Mutates route_info in-place, adding an 'info' sub-dict with enriched fields."""
+    position_km      = route_info.get("current_position_km", 0.0)
+    total_km         = route_info.get("total_distance_km",   0.0)
+    current          = route_info.get("current", {})
+    stops            = route_info.get("stops",   [])
+
+    route_info["distance_left_km"] = max(0.0, total_km - position_km)
+    route_info["time_left_h"]      = round(route_info["distance_left_km"] / speed, 2) if speed > 0 else None
+
+    lat_min, lat_max, lon_min, lon_max, name, status, recommendation = _route_terrain_status(current, stops, position_km)
+
+    distance_left_km = point_to_rectangle_distance(
+        route_info["current"]["latitude"],
+        route_info["current"]["longitude"],
+        lat_min, lat_max, lon_min, lon_max,
+    ) if lat_min != lat_max != lon_min != lon_max != 0 else 0
+    time_left_h = round(distance_left_km / speed, 2) if speed > 0 else 0
+
+    route_info["info"] = {
+        "distance_left_km": round(distance_left_km, 2),
+        "time_left_h":      time_left_h,
+        "name":             name,
+        "status":           status,
+        "recommendation":   recommendation,
+    }
 
 
 def compute_health(
@@ -250,7 +367,7 @@ def process(payload: dict) -> TelemetryRow:
         time             — datetime (UTC)
         loco_id          — str
         health_score     — float  0–100
-        health_category  — str    A–E
+        health_category  — str    run-normal
         alert_count      — int
         params           — dict   enriched metrics
         route_info       — dict   raw route info (empty dict if absent)
@@ -264,9 +381,18 @@ def process(payload: dict) -> TelemetryRow:
     loco_data          = _CONFIG["locomotives"].get(loco_type, {})
     metrics_definition = loco_data.get("metrics", {})
 
-    enriched                          = enrich_metrics(metrics, metrics_definition)
+    enriched                            = enrich_metrics(metrics, metrics_definition)
     health_score, category, top_impacts = compute_health(train_id, metrics, metrics_definition)
-    alert_count                       = sum(1 for f in enriched.values() if f["status"] != _SEVERITY_RU["normal"])
+    alert_count                         = sum(1 for f in enriched.values() if f["status"] != _SEVERITY_RU["normal"])
+    enrich_route(route_info, enriched["speed"]["value"])
+
+    enriched["system_condition"] = {
+        "name": "Состояние Узлов",
+        "value": [
+            {"name": label, "value": enriched[key]["status"]} if key in enriched else _SEVERITY_RU["normal"]
+            for key, label in _NODE_STATUS_KEYS.items()
+        ],
+    }
 
     try:
         time = datetime.fromisoformat(timestamp_str.replace("Z", "+00:00"))
