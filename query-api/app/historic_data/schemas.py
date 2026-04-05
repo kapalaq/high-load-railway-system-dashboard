@@ -10,6 +10,7 @@ class TelemetryRecord(BaseModel):
     health_score: float | None
     health_category: str | None
     alert_count: int | None
+    top_impacts: list[Any] | None
     params: dict[str, Any] | None
     route_info: dict[str, Any] | None
 

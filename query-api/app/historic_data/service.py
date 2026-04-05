@@ -6,7 +6,7 @@ from sqlmodel import Session
 from .schemas import MetricDataPoint, MetricHistory, TelemetryRecord
 
 _DISTANCE_QUERY = """
-SELECT time, train_id, health_score, health_category, alert_count, params, route_info
+SELECT time, train_id, health_score, health_category, alert_count, top_impacts, params, route_info
 FROM telemetry
 WHERE train_id = :train_id
   AND (route_info->>'current_position_km') IS NOT NULL
@@ -86,6 +86,7 @@ def get_telemetry_by_distance(
         health_score=row.health_score,
         health_category=row.health_category.strip() if row.health_category else None,
         alert_count=row.alert_count,
+        top_impacts=row.top_impacts,
         params=row.params,
         route_info=row.route_info,
     )
